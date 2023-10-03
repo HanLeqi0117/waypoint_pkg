@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 		// 幾何学的な意味は回転しないこと(恒等変換)を指す
 		points.pose.orientation.w = 1.0;
 
-		// 送信するマーカの座標をwaypointから取得する
+		// 送信するマーカーの座標をwaypointから取得する
 		// 処理が冗長である。ROS2で改善すべき
 		for(int i = 1; i < waypoint.size(); i++)
 		{

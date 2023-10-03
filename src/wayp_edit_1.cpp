@@ -30,7 +30,14 @@ class wayp_class{
   private:
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
     std::vector< text_way > wayp;
+        
+    // 「processFeedback()」関数を定義する
+    // 戻り値：なし
+    // 引数：ROSメッセージインターフェイス「InteractiveMarkerFeedback」のコンスタントポインタ
+    // 「InteractiveMarkerFeedback」の内容について、URL：http://docs.ros.org/en/noetic/api/visualization_msgs/html/msg/InteractiveMarkerFeedback.html
+    // 機能：異なるフィードバックの状態に基づいて、異なる処理(メニューの変更処理と位置情報の変更処理)を行う    
     void processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
+    
     InteractiveMarkerControl& makeBoxControl( InteractiveMarker &msg );
     void makeCube(int name, text_way posi);
     void makeCubeALL(int start);
@@ -52,6 +59,7 @@ class wayp_class{
     void publish_line();
     std::string get_mode_name(int mode_number);
 };
+
 wayp_class::wayp_class( boost::shared_ptr<interactive_markers::InteractiveMarkerServer> serv):server( serv ){
   menu_handler.insert( "Erase Cube", boost::bind( &wayp_class::processFeedback, this, _1 ));
   menu_handler.insert( "change mode normal", boost::bind( &wayp_class::processFeedback, this, _1 ));
