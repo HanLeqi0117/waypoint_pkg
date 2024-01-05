@@ -8,12 +8,14 @@ WaypointHandler::WaypointHandler() : Node("marker_server")
     this->declare_parameter("write_file_name", std::string("/home/ubuntu/ubuntu/rewaypoint.txt"));
     this->declare_parameter("save_service_name", std::string("save_service"));
     this->declare_parameter("update_service_name", std::string("update_service"));
+    this->declare_parameter("debug", false);
 
     // パラメータ取得
     this->get_parameter("read_file_name", this->read_file_name_param_);
     this->get_parameter("write_file_name", this->write_file_name_param_);
     this->get_parameter("save_service_name", this->save_service_name_param_);
     this->get_parameter("update_service_name", this->update_service_name_param_);
+    this->get_parameter("debug", this->debug_params_);
 
     // パブリッシャ定義
     this->marker_pub_ = this->create_publisher<Marker>("marker", 1);
@@ -80,7 +82,7 @@ void WaypointHandler::initialize()
         std::vector<std::string> tokens;
         std::string token;
         // デバッグ
-        RCLCPP_INFO(this->get_logger(), "%s", iss.str().c_str());
+		if (this->debug_params_.as_bool()){RCLCPP_INFO(this->get_logger(), "%s", iss.str().c_str());}
         
         // 行を列ごとに読み込む
         while(std::getline(iss, token, ','))
@@ -160,7 +162,8 @@ void WaypointHandler::save_file_()
             << geometry_quat.y << "," 
             << geometry_quat.z << "," 
             << geometry_quat.w << "," 
-            << waypoint.mode.data << std::endl;
+            << static_cast<int>(waypoint.mode.data) << std::endl;
+			
     }
 
     ofs_ptr_->close();

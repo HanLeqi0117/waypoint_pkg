@@ -73,6 +73,7 @@ class WaypointHandler : public rclcpp::Node
         rclcpp::Parameter write_file_name_param_;
         rclcpp::Parameter save_service_name_param_;
         rclcpp::Parameter update_service_name_param_;
+        rclcpp::Parameter debug_params_;
         
         // The Menu API of Marker
         MenuHandler menu_handler_;
