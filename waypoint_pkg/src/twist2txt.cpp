@@ -183,7 +183,7 @@ class Twist2Txt : public rclcpp::Node
                 << " yaw_now " << wayp_tmp.yaw.data * 180.0 / M_PI 
                 << " diff_yaw " << diff_yaw * 180.0 / M_PI 
                 << " diff_way " << diff_way << std::endl;
-            RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
+            RCLCPP_DEBUG(this->get_logger(), "%s", ss.str().c_str());
             
             // Yaw角の差分は円弧の弧度差分閾値より大きい場合かつ距離差分は円弧の弦差分閾値より大きい場合
             // また、距離差分は直線距離差分より大きい場合
