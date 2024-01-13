@@ -102,7 +102,7 @@ class Twist2Txt : public rclcpp::Node
             // TF2システムから地図とロボットの座標変換関係を取得する
             try
             {
-                RCLCPP_INFO(get_logger(), "Get Tranfromation between /map and /base_link ... \n");
+                RCLCPP_DEBUG(get_logger(), "Get Tranfromation between /map and /base_link ... \n");
                 // 「tf2_buffer_」のメンバ関数「lookupTransform」を呼び出す
                 // 戻り値：二つの座標IDの座標変換結果、すなわち二つの座標の空間関係
 				// 引数1：変換先の座標ID
