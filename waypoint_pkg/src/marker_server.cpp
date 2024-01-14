@@ -200,7 +200,7 @@ void WaypointHandler::make_marker_(int name, Waypoint wayp_tmp)
 	std::stringstream ss;
 	int_marker.name = std::to_string(name);
 	// マーカーの説明文を作成する
-	ss << "No. " << int_marker.name << " - " << "mode." << get_mode_name_(wayp_tmp.mode.data);
+	ss << "No." << int_marker.name.c_str() << "-" << "mode." << get_mode_name_(wayp_tmp.mode.data);
 	// 説明文を「int_marker」インスタンスに渡す
 	int_marker.description = ss.str();
 
