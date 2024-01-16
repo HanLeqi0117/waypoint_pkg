@@ -31,11 +31,6 @@ class WayopintMode():
     STOP = 4
     SIGNAL = 5
 
-def get_euler(quat : Quaternion) -> tuple:
-    return euler_from_quaternion([
-        quat.x, quat.y, quat.z, quat.w
-    ])
-
 def vector3_to_point(vector3 : Vector3) -> Point:
     point = Point()
     point.x = vector3.x
@@ -46,7 +41,12 @@ def vector3_to_point(vector3 : Vector3) -> Point:
 
 def pose_to_waypoint(pose : Pose, vector : Vector3 = None) -> dict:
     waypoint = {}
-    rpy = get_euler(pose.orientation)
+    rpy = euler_from_quaternion(
+        pose.orientation.x,
+        pose.orientation.y,
+        pose.orientation.z,
+        pose.orientation.w,        
+    )
     if vector is not None:
         waypoint['pos_x'] = vector.x
         waypoint['pos_y'] = vector.y

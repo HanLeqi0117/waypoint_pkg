@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'data2waypoint = gps_wp_pkg.data2waypoint:main'
+            'data2waypoint = gps_wp_pkg.data2waypoint:main',
+            'waypoint_editor = gps_wp_pkg.waypoint_editor:main'
         ],
     },
 )

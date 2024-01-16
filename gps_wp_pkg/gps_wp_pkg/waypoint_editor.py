@@ -42,7 +42,6 @@ class WaypointEditor(Node):
         self._interactive_marker_server_.applyChanges()
         
         self._read_file_stream_.close()
-        
     
     def process_callback(self, feedback : InteractiveMarkerFeedback):
         if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
@@ -205,6 +204,18 @@ class WaypointEditor(Node):
             
             line_strip.points.append(point)
 
-            
+    def __del__(self):
+        ruamel.yaml.safe_dump(self._waypoints_, self._write_file_stream_)
+        self._saved_time_ = self.get_clock().now()
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = WaypointEditor()
+    rclpy.spin(node)
+    if node.get_clock().sleep_until(node._saved_time_):
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
             
             
