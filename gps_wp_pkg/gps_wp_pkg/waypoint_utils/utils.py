@@ -9,7 +9,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import (
     Point, PoseWithCovariance, Vector3,
     PoseWithCovarianceStamped, Quaternion,
-    PointStamped, PoseStamped
+    PointStamped, PoseStamped, Pose
 )
 from sensor_msgs.msg import NavSatFix, Imu
 from tf2_geometry_msgs import tf2_geometry_msgs
@@ -23,12 +23,20 @@ from interactive_markers.interactive_marker_server import *
 from tf_transformations import euler_from_quaternion
 import math
 
-def get_euler(quat = Quaternion()) -> tuple:
+class WayopintMode():
+    NORMAL = 0
+    SEARCH = 1
+    CANCEL = 2
+    DIRECT = 3
+    STOP = 4
+    SIGNAL = 5
+
+def get_euler(quat : Quaternion) -> tuple:
     return euler_from_quaternion([
         quat.x, quat.y, quat.z, quat.w
     ])
 
-def vector3_to_point(vector3 = Vector3()) -> Point:
+def vector3_to_point(vector3 : Vector3) -> Point:
     point = Point()
     point.x = vector3.x
     point.y = vector3.y
@@ -36,19 +44,25 @@ def vector3_to_point(vector3 = Vector3()) -> Point:
     
     return point
 
-def pose_to_waypoint(pose = PoseStamped()) -> dict:
+def pose_to_waypoint(pose : Pose, vector : Vector3 = None) -> dict:
     waypoint = {}
-    rpy = get_euler(pose.pose.orientation)
-    waypoint['pos_x'] = pose.pose.position.x
-    waypoint['pos_y'] = pose.pose.position.y
-    waypoint['pos_z'] = pose.pose.position.z
-    waypoint['quat_x'] = pose.pose.orientation.x
-    waypoint['quat_y'] = pose.pose.orientation.y
-    waypoint['quat_z'] = pose.pose.orientation.z
-    waypoint['quat_w'] = pose.pose.orientation.w
+    rpy = get_euler(pose.orientation)
+    if vector is not None:
+        waypoint['pos_x'] = vector.x
+        waypoint['pos_y'] = vector.y
+        waypoint['pos_z'] = vector.z
+    else:
+        waypoint['pos_x'] = pose.position.x
+        waypoint['pos_y'] = pose.position.y
+        waypoint['pos_z'] = pose.position.z
+        
+    waypoint['quat_x'] = pose.orientation.x
+    waypoint['quat_y'] = pose.orientation.y
+    waypoint['quat_z'] = pose.orientation.z
+    waypoint['quat_w'] = pose.orientation.w
     waypoint['roll'] = rpy[0]
     waypoint['pitch'] = rpy[1]
     waypoint['yaw'] = rpy[2]
-    waypoint['mode'] = 0
+    waypoint['mode'] = WayopintMode.NORMAL
     
     return waypoint

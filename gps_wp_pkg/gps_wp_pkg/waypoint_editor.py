@@ -19,13 +19,22 @@ class WaypointEditor(Node):
         
         self.get_clock().sleep_for(Duration(seconds=0, nanoseconds=int(1e7)))
 
+        self._waypoints_ = []
         self._waypoints_ = ruamel.yaml.safe_load(self._read_file_stream_)["waypoints"]
         
-        self._menu_handler_.insert(title="Erase", callback=self.process_callback)
-        self._menu_handler_.insert(title="Add", callback=self.process_callback)
-        change_menu_handler = self._menu_handler_.insert(title="Change Mode", callback=self.process_callback)
-        self._menu_handler_.insert(title="Info", callback=self.process_callback)
-        self._menu_handler_.insert(title="Normal", parent=change_menu_handler, callback=self.process_callback)
+        self._menu_id_ = {}
+        self._menu_id_['mode'] = {}
+        
+        self._menu_id_['erase'] = self._menu_handler_.insert(title="Erase", callback=self.process_callback)
+        self._menu_id_['add'] = self._menu_handler_.insert(title="Add", callback=self.process_callback)
+        self._menu_id_['info'] = self._menu_handler_.insert(title="Info", callback=self.process_callback)
+        self._menu_id_['mode']['main'] = self._menu_handler_.insert(title="Mode", callback=self.process_callback)
+        self._menu_id_['mode']['normal'] = self._menu_handler_.insert(title="Normal", parent=self._menu_id_['mode'], callback=self.process_callback)
+        self._menu_id_['mode']['search'] = self._menu_handler_.insert(title="Search", parent=self._menu_id_['mode'], callback=self.process_callback)
+        self._menu_id_['mode']['cancel'] = self._menu_handler_.insert(title="Cancel", parent=self._menu_id_['mode'], callback=self.process_callback)
+        self._menu_id_['mode']['direct'] = self._menu_handler_.insert(title="Direct", parent=self._menu_id_['mode'], callback=self.process_callback)
+        self._menu_id_['mode']['stop'] = self._menu_handler_.insert(title="Stop", parent=self._menu_id_['mode'], callback=self.process_callback)
+        self._menu_id_['mode']['signal'] = self._menu_handler_.insert(title="Signal", parent=self._menu_id_['mode'], callback=self.process_callback)
         
         for index in range(len(self._waypoints_)):
             self.make_marker(index, self._waypoints_[index])
@@ -35,7 +44,7 @@ class WaypointEditor(Node):
         self._read_file_stream_.close()
         
     
-    def process_callback(self, feedback = InteractiveMarkerFeedback()):
+    def process_callback(self, feedback : InteractiveMarkerFeedback):
         if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
             index = int(feedback.marker_name)
             mode = self._waypoints_[index]['mode']
@@ -45,11 +54,44 @@ class WaypointEditor(Node):
             self.update_path()
         elif feedback.event_type == InteractiveMarkerFeedback.MENU_SELECT:
             self.get_logger().info("Menu No.{} is selected".format(feedback.menu_entry_id))
+            waypoint_index = int(feedback.marker_name)
             
-            if(feedback.menu_entry_id == 1):
-                pass
+            if feedback.menu_entry_id == self._menu_id_['erase']:
+                self.get_logger().info("Erase Waypoint No.{}".format(waypoint_index))
+                self.erase_marker(waypoint_index)
+                self._waypoints_.pop(waypoint_index)
+                self.make_marker_all(index)
+                self.update_path()
+            
+            if feedback.menu_entry_id == self._menu_id_['add']:
+                self.get_logger().info("Insert one Waypoint after No.{}".format(waypoint_index))
+                self.insert_marker(waypoint_index)
+                
+            if feedback.menu_entry_id == self._menu_id_['info']:
+                self.get_logger().info("Print the information of Waypoint No.{}".format(waypoint_index))
+                self.get_logger().info("{}".format(self._waypoints_[waypoint_index]))
+            
+            if feedback.menu_entry_id == self._menu_id_['mode']['main']:
+                if feedback.menu_entry_id == self._menu_id_['mode']['normal']:
+                    self._waypoints_[waypoint_index]['mode'] = WayopintMode.NORMAL
+                    self.get_logger().info("Change the mode of Waypoint No.{} to Normal".format(waypoint_index))
+                elif feedback.menu_entry_id == self._menu_id_['mode']['search']:
+                    self._waypoints_[waypoint_index]['mode'] = WayopintMode.SEARCH
+                    self.get_logger().info("Change the mode of Waypoint No.{} to Search".format(waypoint_index))
+                elif feedback.menu_entry_id == self._menu_id_['mode']['cancel']:
+                    self._waypoints_[waypoint_index]['mode'] = WayopintMode.CANCEL
+                    self.get_logger().info("Change the mode of Waypoint No.{} to Cancel".format(waypoint_index))
+                elif feedback.menu_entry_id == self._menu_id_['mode']['direct']:
+                    self._waypoints_[waypoint_index]['mode'] = WayopintMode.DIRECT
+                    self.get_logger().info("Change the mode of Waypoint No.{} to Direct".format(waypoint_index))
+                elif feedback.menu_entry_id == self._menu_id_['mode']['stop']:
+                    self._waypoints_[waypoint_index]['mode'] = WayopintMode.STOP
+                    self.get_logger().info("Change the mode of Waypoint No.{} to Stop".format(waypoint_index))
+                elif feedback.menu_entry_id == self._menu_id_['mode']['signal']:
+                    self._waypoints_[waypoint_index]['mode'] = WayopintMode.SIGNAL
+                    self.get_logger().info("Change the mode of Waypoint No.{} to Signal".format(waypoint_index))
     
-    def make_marker(self, waypoint_number=int(), waypoint=dict()):
+    def make_marker(self, waypoint_number : int, waypoint : dict):
         interactive_marker = InteractiveMarker()
         control, arrow_control  = InteractiveMarkerControl(), InteractiveMarkerControl()
         arrow_marker = Marker()
@@ -111,17 +153,35 @@ class WaypointEditor(Node):
         self._interactive_marker_server_.setCallback(marker=interactive_marker.name, feedback_callback=self.process_callback)
         self._menu_handler_.apply(self._interactive_marker_server_, interactive_marker.name)
 
-    def make_marker_all(self, waypoint_start_number=int()):
+    def make_marker_all(self, waypoint_start_number : int):
         for index in range(waypoint_start_number, len(self._waypoints_)):
             self.make_marker(index, self._waypoints_[index])
         
         self._interactive_marker_server_.applyChanges()
     
-    def erase_marker(self, waypoint_start_number=int()):
+    def erase_marker(self, waypoint_start_number : int):
         for index in range(waypoint_start_number, len(self._waypoints_)):
             self._interactive_marker_server_.erase(str(index))
             
         self._interactive_marker_server_.applyChanges()
+    
+    def insert_marker(self, waypoint_number : int):
+        self.erase_marker(waypoint_number)
+        waypoint = self._waypoints_[waypoint_number]
+        waypoint['pos_x'] = (
+            self._waypoints_[waypoint_number]['pos_x']
+            + self._waypoints_[waypoint_number + 1]['pos_x']
+        ) / 2
+        waypoint['pos_y'] = (
+            self._waypoints_[waypoint_number]['pos_y']
+            + self._waypoints_[waypoint_number + 1]['pos_y']
+        ) / 2
+        
+        waypoint['mode'] = 0
+        self._waypoints_.insert(waypoint_number + 1, waypoint)
+        
+        self.make_marker_all(waypoint_number)
+        self.update_path()
     
     def update_path(self):
         line_strip = Marker()

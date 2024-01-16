@@ -50,20 +50,11 @@ class Data2Waypoint(Node):
         elif self._mode_ == "SLAM":
             quaternion = self._transform_.transform.rotation
         
-        waypoint = {}
-        waypoint['pos_x'] = self._transform_.transform.translation.x
-        waypoint['pos_y'] = self._transform_.transform.translation.y
-        waypoint['pos_z'] = self._transform_.transform.translation.z
-        waypoint['roll'] = get_euler(quaternion)
-        waypoint['pitch'] = get_euler(quaternion)
-        waypoint['yaw'] = get_euler(quaternion)
-        waypoint['quat_x'] = quaternion.x
-        waypoint['quat_y'] = quaternion.y
-        waypoint['quat_z'] = quaternion.z
-        waypoint['quat_w'] = quaternion.w
+        pose = Pose()
+        pose.orientation = quaternion
+        waypoint = pose_to_waypoint(pose, self._transform_.transform.translation)
         waypoint['longitude'] = self._navsat_fix_data_.longitude
         waypoint['latitude'] = self._navsat_fix_data_.latitude
-        waypoint['mode'] = 0
                
         if len(self._waypoints_["waypoints"]) == 0:
             self._waypoints_['waypoints'].append(waypoint)
