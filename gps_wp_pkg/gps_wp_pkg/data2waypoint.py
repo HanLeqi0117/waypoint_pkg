@@ -121,14 +121,18 @@ class Data2Waypoint(Node):
         self._marker_pub_.publish(marker)
     
     def __del__(self):
-        ruamel.yaml.dump(self._waypoints_, self._file_stream_)
-        # self._file_stream_.close()       
+        ruamel.yaml.safe_dump(self._waypoints_, self._file_stream_)
+        # self._file_stream_.close()
+        self._saved_time_ = self.get_clock().now()
+        type(self.get_clock().now())
         
 def main(args=None):
     rclpy.init(args=args)
     node = Data2Waypoint()
     rclpy.spin(node)
-    rclpy.shutdown()
+    saved_time = node._saved_time_.to_msg().nanosec + int(5e8)
+    if node.get_clock().sleep_until(saved_time):
+        rclpy.shutdown()
     
 if __name__ == "__main__":
     main()

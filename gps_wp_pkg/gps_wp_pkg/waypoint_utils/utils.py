@@ -20,7 +20,7 @@ from tf2_ros.buffer import Buffer, TransformStamped
 from waypoint_pkg_interfaces.msg import Waypoint
 from interactive_markers.menu_handler import *
 from interactive_markers.interactive_marker_server import *
-from tf_transformations import euler_from_quaternion
+from tf_transformations import euler_from_quaternion, quaternion_from_euler
 import math
 
 class WayopintMode():
@@ -41,12 +41,12 @@ def vector3_to_point(vector3 : Vector3) -> Point:
 
 def pose_to_waypoint(pose : Pose, vector : Vector3 = None) -> dict:
     waypoint = {}
-    rpy = euler_from_quaternion(
+    rpy = euler_from_quaternion([
         pose.orientation.x,
         pose.orientation.y,
         pose.orientation.z,
         pose.orientation.w,        
-    )
+    ])
     if vector is not None:
         waypoint['pos_x'] = vector.x
         waypoint['pos_y'] = vector.y
