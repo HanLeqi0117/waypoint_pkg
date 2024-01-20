@@ -23,17 +23,19 @@ WaypointHandler::WaypointHandler() : Node("marker_server")
 	// マーカーサーバーの定義
 	this->marker_server_ = std::make_shared<InteractiveMarkerServer>("interactive_marker_topic", this);
 
-    // サービス定義
-    // this->save_file_service_ = 
-    //     this->create_service<std_srvs::srv::Trigger>(
-    //         this->save_service_name_param_.as_string(), 
-    //         std::bind(&WaypointHandler::save_file_callback_, this, _1, _2)
-    // );
-    // this->waypoints_update_service_ = 
-    //     this->create_service<WaypointsUpdate>(
-    //         this->update_service_name_param_.as_string(), 
-    //         std::bind(&WaypointHandler::waypoints_update_callback_, this, _1, _2)
-    // );
+    /*
+	サービス定義
+    this->save_file_service_ = 
+        this->create_service<std_srvs::srv::Trigger>(
+            this->save_service_name_param_.as_string(), 
+            std::bind(&WaypointHandler::save_file_callback_, this, _1, _2)
+    );
+    this->waypoints_update_service_ = 
+        this->create_service<WaypointsUpdate>(
+            this->update_service_name_param_.as_string(), 
+            std::bind(&WaypointHandler::waypoints_update_callback_, this, _1, _2)
+    );
+	*/
 
     // スリープする
     rclcpp::sleep_for(10ms);

@@ -3,7 +3,7 @@ from gps_wp_pkg.waypoint_utils.utils import *
 class WaypointEditor(Node):
     def __init__(self):
         super().__init__("waypoint_editor")
-        self._waypoints_ : Dict(str, List(Dict(str, None)))
+        self._waypoints_ = Waypoint.waypoints
         
         self._read_file_name_ = self.declare_parameter("read_file_name", os.path.join(os.environ['HOME'], "default_waypoint.yaml")).get_parameter_value().string_value
         self._write_file_name_ = self.declare_parameter("write_file_name", os.path.join(os.environ['HOME'], "default_rewaypoint.yaml")).get_parameter_value().string_value
@@ -47,7 +47,9 @@ class WaypointEditor(Node):
         if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
             index = int(feedback.marker_name)
             mode = self._waypoints_['waypoints'][index]['mode']
-            self._waypoints_['waypoints'][index] = pose_to_waypoint(feedback.pose)
+            waypoint_after = pose_to_waypoint(feedback.pose)
+            waypoint_after["latitude"], waypoint_after["longitude"] = latlon_while_waypoint_changed(self._waypoints_['waypoints'][index], waypoint_after)
+            self._waypoints_['waypoints'][index] = waypoint_after
             self._waypoints_['waypoints'][index]['mode'] = mode
             
             self.update_path()
@@ -78,22 +80,22 @@ class WaypointEditor(Node):
                 return
             
             if feedback.menu_entry_id == self._menu_id_['mode']['normal']:
-                self._waypoints_['waypoints'][waypoint_index]['mode'] = WayopintMode.NORMAL
+                self._waypoints_['waypoints'][waypoint_index]['mode'] = WaypointMode.NORMAL
                 self.get_logger().info("Change the mode of Waypoint No.{} to Normal".format(waypoint_index))
             elif feedback.menu_entry_id == self._menu_id_['mode']['search']:
-                self._waypoints_['waypoints'][waypoint_index]['mode'] = WayopintMode.SEARCH
+                self._waypoints_['waypoints'][waypoint_index]['mode'] = WaypointMode.SEARCH
                 self.get_logger().info("Change the mode of Waypoint No.{} to Search".format(waypoint_index))
             elif feedback.menu_entry_id == self._menu_id_['mode']['cancel']:
-                self._waypoints_['waypoints'][waypoint_index]['mode'] = WayopintMode.CANCEL
+                self._waypoints_['waypoints'][waypoint_index]['mode'] = WaypointMode.CANCEL
                 self.get_logger().info("Change the mode of Waypoint No.{} to Cancel".format(waypoint_index))
             elif feedback.menu_entry_id == self._menu_id_['mode']['direct']:
-                self._waypoints_['waypoints'][waypoint_index]['mode'] = WayopintMode.DIRECT
+                self._waypoints_['waypoints'][waypoint_index]['mode'] = WaypointMode.DIRECT
                 self.get_logger().info("Change the mode of Waypoint No.{} to Direct".format(waypoint_index))
             elif feedback.menu_entry_id == self._menu_id_['mode']['stop']:
-                self._waypoints_['waypoints'][waypoint_index]['mode'] = WayopintMode.STOP
+                self._waypoints_['waypoints'][waypoint_index]['mode'] = WaypointMode.STOP
                 self.get_logger().info("Change the mode of Waypoint No.{} to Stop".format(waypoint_index))
             elif feedback.menu_entry_id == self._menu_id_['mode']['signal']:
-                self._waypoints_['waypoints'][waypoint_index]['mode'] = WayopintMode.SIGNAL
+                self._waypoints_['waypoints'][waypoint_index]['mode'] = WaypointMode.SIGNAL
                 self.get_logger().info("Change the mode of Waypoint No.{} to Signal".format(waypoint_index))
             
             self._interactive_marker_server_.erase(str(waypoint_index))
@@ -199,6 +201,11 @@ class WaypointEditor(Node):
             self._waypoints_['waypoints'][waypoint_number]['pos_y']
             + self._waypoints_['waypoints'][waypoint_number + 1]['pos_y']
         ) / 2.0
+        
+        next_waypoint['latitude'], next_waypoint['longitude'] = get_midlatlon(
+            next_waypoint,
+            self._waypoints_['waypoints'][waypoint_number + 1]
+        )
         
         next_waypoint['mode'] = 0
         self._waypoints_['waypoints'].insert(waypoint_number + 1, next_waypoint)
