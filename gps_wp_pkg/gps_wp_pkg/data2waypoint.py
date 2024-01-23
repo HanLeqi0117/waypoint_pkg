@@ -124,7 +124,6 @@ class Data2Waypoint(Node):
         ruamel.yaml.safe_dump(self._waypoints_, self._file_stream_)
         # self._file_stream_.close()
         self._saved_time_ = self.get_clock().now()
-        type(self.get_clock().now())
         
 def main(args=None):
     rclpy.init(args=args)
