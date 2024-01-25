@@ -21,7 +21,7 @@ class Data2Waypoint(Node):
         self._transform_ = TransformStamped()
         self._compus_imu_data_ = Imu()
         self._navsat_fix_data_ = NavSatFix()
-        self._waypoints_ = {"waypoints" : [{}]}
+        self._waypoints_ = {"waypoints" : []}
         
         self._marker_pub_ = self.create_publisher(Marker, "waypoint_marker", 100)
         
@@ -43,6 +43,8 @@ class Data2Waypoint(Node):
             self.get_logger().debug("Transform between map and base_link is ok.x: {}, y: {}".format(self._transform_.transform.translation.x, self._transform_.transform.translation.y))
         else:
             self.get_logger().warn("Trasform between map and base_link is not ready")
+            self.get_clock().sleep_for(Duration(seconds=1))
+            return
         
         if self._mode_ == "GPS":
             quaternion = self._compus_imu_data_.orientation
