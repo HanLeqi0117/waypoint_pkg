@@ -15,13 +15,11 @@ class WaypointEditor(Node):
         self._marker_pub_ = self.create_publisher(Marker, "waypoint_marker", 1)
         self._interactive_marker_server_ = InteractiveMarkerServer(self, "interacetive_marker_server")
         self._menu_handler_ = MenuHandler()
-        self._read_file_stream_ = open(self._read_file_name_, "r")
-        self._write_file_stream_ = open(self._write_file_name_, "w")
+        with open(self._read_file_name_, "r") as f:
+            self._waypoints_ = ruamel.yaml.safe_load(f)
         
         self.get_clock().sleep_for(Duration(seconds=0, nanoseconds=int(1e7)))
 
-        self._waypoints_ = ruamel.yaml.safe_load(self._read_file_stream_)
-        
         self._menu_id_ = {}
         self._menu_id_['mode'] = {}
         
@@ -40,9 +38,7 @@ class WaypointEditor(Node):
             self.make_marker(index, self._waypoints_['waypoints'][index])
         
         self._interactive_marker_server_.applyChanges()
-        
-        self._read_file_stream_.close()
-    
+            
     def process_callback(self, feedback : InteractiveMarkerFeedback):
         if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
             index = int(feedback.marker_name)
@@ -101,6 +97,9 @@ class WaypointEditor(Node):
             self._interactive_marker_server_.erase(str(waypoint_index))
             self._interactive_marker_server_.applyChanges()
             self.make_marker(waypoint_index, self._waypoints_['waypoints'][waypoint_index])
+            
+        with open(self._write_file_name_, "w+") as f:
+            ruamel.yaml.safe_dump(self._waypoints_, f)
     
     def make_marker(self, waypoint_number : int, waypoint : dict):
         interactive_marker = InteractiveMarker()
@@ -236,16 +235,11 @@ class WaypointEditor(Node):
         
         self._marker_pub_.publish(line_strip)
 
-    def __del__(self):
-        ruamel.yaml.safe_dump(self._waypoints_, self._write_file_stream_)
-        self._saved_time_ = self.get_clock().now()
-
 def main(args=None):
     rclpy.init(args=args)
     node = WaypointEditor()
     rclpy.spin(node)
-    if node.get_clock().sleep_until(node._saved_time_):
-        rclpy.shutdown()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

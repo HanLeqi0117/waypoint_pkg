@@ -21,8 +21,7 @@ class Data2Waypoint(Node):
         self._transform_ = TransformStamped()
         self._compus_imu_data_ = Imu()
         self._navsat_fix_data_ = NavSatFix()
-        self._waypoints_ = {"waypoints" : []}
-        self._file_stream_ = open(self._waypoint_file_, "w")
+        self._waypoints_ = {"waypoints" : [{}]}
         
         self._marker_pub_ = self.create_publisher(Marker, "waypoint_marker", 100)
         
@@ -92,6 +91,9 @@ class Data2Waypoint(Node):
             
             self._waypoints_["waypoints"].append(waypoint)
             
+            with open(self._waypoint_file_, "w+") as f:
+                ruamel.yaml.safe_dump(self._waypoints_, f)
+            
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = self.get_clock().now().to_msg()
@@ -120,18 +122,12 @@ class Data2Waypoint(Node):
 
         self._marker_pub_.publish(marker)
     
-    def __del__(self):
-        ruamel.yaml.safe_dump(self._waypoints_, self._file_stream_)
-        # self._file_stream_.close()
-        self._saved_time_ = self.get_clock().now()
         
 def main(args=None):
     rclpy.init(args=args)
     node = Data2Waypoint()
     rclpy.spin(node)
-    saved_time = node._saved_time_.to_msg().nanosec + int(5e8)
-    if node.get_clock().sleep_until(saved_time):
-        rclpy.shutdown()
+    rclpy.shutdown()
     
 if __name__ == "__main__":
     main()
