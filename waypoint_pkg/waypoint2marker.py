@@ -3,7 +3,6 @@ from waypoint_pkg.waypoint_utils.utils import (
     Node, Waypoint, Marker, Pose,
     os, quaternion_from_euler
 )
-from whill_navi2.modules.ros2_launch_utils import DataPath
 
 class Waypoint2Marker(Node):
 
@@ -11,7 +10,7 @@ class Waypoint2Marker(Node):
         super().__init__("waypoint_display")
 
         self._waypoint_read_file_ = self.declare_parameter(
-            "waypoint_read_file", DataPath().get_rewapypoint_path()[0]
+            "waypoint_read_file", os.path.join(os.environ["HOME"], "read_file.yaml")
         ).get_parameter_value().string_value
         self._until_node_ = self.declare_parameter("until_node", "navigation_rviz").get_parameter_value().string_value
 
