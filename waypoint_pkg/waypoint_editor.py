@@ -1,4 +1,13 @@
-from waypoint_pkg.waypoint_utils.utils import *
+from waypoint_pkg.waypoint_utils.utils import (
+    Waypoint, Node, ParameterDescriptor, Marker,
+    InteractiveMarkerServer, MenuHandler, ruamel,
+    Duration, InteractiveMarkerFeedback, WaypointMode,
+    InteractiveMarker, InteractiveMarkerControl,
+    Point, os, rclpy,
+    pose_to_waypoint,latlon_while_waypoint_altered,
+    get_midlatlon
+)
+
 
 class WaypointEditor(Node):
     def __init__(self):
@@ -9,7 +18,7 @@ class WaypointEditor(Node):
         self._write_file_name_ = self.declare_parameter("write_file_name", os.path.join(os.environ['HOME'], "default_rewaypoint.yaml")).get_parameter_value().string_value
         parameter_descriptor = ParameterDescriptor()
         parameter_descriptor.name = "waypoint_mode"
-        parameter_descriptor.description = "GPS or SLAM"
+        parameter_descriptor.description = "GNSS or SLAM"
         self._mode_ = self.declare_parameter("mode", "SLAM", parameter_descriptor).get_parameter_value().string_value
         
         self._marker_pub_ = self.create_publisher(Marker, "waypoint_marker", 1)
@@ -44,11 +53,12 @@ class WaypointEditor(Node):
             index = int(feedback.marker_name)
             mode = self._waypoints_['waypoints'][index]['mode']
             waypoint_after = pose_to_waypoint(feedback.pose)
-            waypoint_after["latitude"], waypoint_after["longitude"] = latlon_while_waypoint_changed(self._waypoints_['waypoints'][index], waypoint_after)
+            waypoint_after["latitude"], waypoint_after["longitude"] = latlon_while_waypoint_altered(self._waypoints_['waypoints'][index], waypoint_after)
             self._waypoints_['waypoints'][index] = waypoint_after
             self._waypoints_['waypoints'][index]['mode'] = mode
             
             self.update_path()
+
         elif feedback.event_type == InteractiveMarkerFeedback.MENU_SELECT:
             self.get_logger().info("Menu No.{} is selected".format(feedback.menu_entry_id))
             waypoint_index = int(feedback.marker_name)
@@ -68,7 +78,24 @@ class WaypointEditor(Node):
                 
             elif feedback.menu_entry_id == self._menu_id_['info']:
                 self.get_logger().info("Print the information of Waypoint No.{}".format(waypoint_index))
-                self.get_logger().info("{}".format(self._waypoints_['waypoints'][waypoint_index]))
+                self.get_logger().info("The status of Waypoint: \
+                    \n ================================================================================\
+                    \nNo. {}: \
+                    \n\tlatittude: {} \
+                    \n\tlongtitude: {} \
+                    \n\tx: {} \
+                    \n\ty: {} \
+                    \n\tyaw: {} \
+                    \n\tmode: {} \
+                ".format(
+                    waypoint_index, 
+                    self._waypoints_['waypoints'][waypoint_index]["latitude"], 
+                    self._waypoints_['waypoints'][waypoint_index]["longitude"], 
+                    self._waypoints_['waypoints'][waypoint_index]['pos_x'],
+                    self._waypoints_['waypoints'][waypoint_index]['pos_y'],
+                    self._waypoints_['waypoints'][waypoint_index]['yaw'],
+                    self._waypoints_['waypoints'][waypoint_index]['mode']
+                ))
                 return
             
             elif feedback.menu_entry_id == self._menu_id_['mode']['main']:
@@ -202,8 +229,10 @@ class WaypointEditor(Node):
         ) / 2.0
         
         next_waypoint['latitude'], next_waypoint['longitude'] = get_midlatlon(
-            next_waypoint,
-            self._waypoints_['waypoints'][waypoint_number + 1]
+            next_waypoint['latitude'],
+            next_waypoint['longitude'],
+            self._waypoints_['waypoints'][waypoint_number + 1]['latitude'],
+            self._waypoints_['waypoints'][waypoint_number + 1]['longitude']
         )
         
         next_waypoint['mode'] = 0

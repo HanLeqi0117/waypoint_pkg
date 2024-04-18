@@ -5,6 +5,12 @@ package_name = 'waypoint_pkg'
 setup(
     name=package_name,
     version='0.0.0',
+    requires=[
+        'geographiclib',
+        'ruamel.yaml',
+        'numpy',
+        'math'
+    ],
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',

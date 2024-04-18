@@ -13,28 +13,35 @@ class Data2Waypoint(Node):
         self._deg_chord_ = self.declare_parameter("deg_chord", 1.0).get_parameter_value().double_value
         parameter_descriptor = ParameterDescriptor()
         parameter_descriptor.name = "waypoint_mode"
-        parameter_descriptor.description = "GPS or SLAM"
-        self._mode_ = self.declare_parameter("mode", "GPS", parameter_descriptor).get_parameter_value().string_value
+        parameter_descriptor.description = "GNSS or SLAM"
+        self._mode_ = self.declare_parameter("mode", "GNSS", parameter_descriptor).get_parameter_value().string_value
         
         self._tf_buffer_ = Buffer()
         self._tf_listener_ = TransformListener(self._tf_buffer_, self)
         self._transform_ = TransformStamped()
         self._compus_imu_data_ = Imu()
         self._navsat_fix_data_ = NavSatFix()
+        self._gnss_odometry_data_ = Odometry()
         self._waypoints_ = {"waypoints" : []}
+        self._lat_last_ = None
+        self._lon_last_ = None
         
         self._marker_pub_ = self.create_publisher(Marker, "waypoint_marker", 100)
         
         self._navsat_fix_sub_ = self.create_subscription(NavSatFix, "fix", self.navsat_fix_cb, 20)
+        self._gnss_odometry_sub_ = self.create_subscription(Odometry, "odometry", self.gnss_odometry_cb, 20)
         self._compus_imu_sub_ = self.create_subscription(Imu, "imu", self.compus_imu_cb, 20)
         
         self._main_process_timer_ = self.create_timer(0.01, self.main_process)
     
-    def compus_imu_cb(self, msg = Imu()):
+    def compus_imu_cb(self, msg : Imu):
         self._compus_imu_data_ = msg
     
-    def navsat_fix_cb(self, msg = NavSatFix()):
+    def navsat_fix_cb(self, msg : NavSatFix):
         self._navsat_fix_data_ = msg
+    
+    def gnss_odometry_cb(self, msg : Odometry):
+        self._gnss_odometry_data_ = msg
     
     def main_process(self):
         
@@ -46,27 +53,49 @@ class Data2Waypoint(Node):
             self.get_clock().sleep_for(Duration(seconds=1))
             return
         
-        if self._mode_ == "GPS":
+        if self._lat_last_ == None and self._navsat_fix_data_ != None:
+            self._lat_last_ = self._navsat_fix_data_.latitude
+            self._lon_last_ = self._navsat_fix_data_.longitude
+        
+        if self._mode_ == "GNSS":
             quaternion = self._compus_imu_data_.orientation
+            waypoint = pose_to_waypoint(self._gnss_odometry_data_.pose.pose)
+            waypoint['quat_x'] = self._compus_imu_data_.orientation.x
+            waypoint['quat_y'] = self._compus_imu_data_.orientation.y
+            waypoint['quat_z'] = self._compus_imu_data_.orientation.z
+            waypoint['quat_w'] = self._compus_imu_data_.orientation.w
+            waypoint['yaw'] = euler_from_quaternion([
+                waypoint['quat_x'],
+                waypoint['quat_y'],
+                waypoint['quat_z'],
+                waypoint['quat_w']
+            ])[2]
+            waypoint_diff = get_dist_between_geos(
+                self._lat_last_,
+                self._lon_last_,
+                self._navsat_fix_data_.latitude,
+                self._navsat_fix_data_.longitude
+            )
+            marker_scale = 0.8
         elif self._mode_ == "SLAM":
             quaternion = self._transform_.transform.rotation
+            pose = Pose()
+            pose.orientation = quaternion
+            waypoint = pose_to_waypoint(pose, self._transform_.transform.translation)
+            waypoint_diff = math.hypot(
+                waypoint['pos_x']
+                - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['pos_x'],
+                waypoint['pos_y']
+                - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['pos_y'],
+            )
+            marker_scale = 0.3            
         
-        pose = Pose()
-        pose.orientation = quaternion
-        waypoint = pose_to_waypoint(pose, self._transform_.transform.translation)
         waypoint['longitude'] = self._navsat_fix_data_.longitude
         waypoint['latitude'] = self._navsat_fix_data_.latitude
-               
+
         if len(self._waypoints_["waypoints"]) == 0:
             self._waypoints_['waypoints'].append(waypoint)
             return
-        
-        waypoint_diff = math.hypot(
-            waypoint['pos_x']
-            - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['pos_x'],
-            waypoint['pos_y'] 
-            - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['pos_y'],
-        )
         
         yaw_diff = abs(
             waypoint['yaw']
@@ -93,20 +122,23 @@ class Data2Waypoint(Node):
             
             self._waypoints_["waypoints"].append(waypoint)
             
+            self._lat_last_ = self._navsat_fix_data_.latitude
+            self._lon_last_ = self._navsat_fix_data_.longitude
+            
             with open(self._waypoint_file_, "w+") as f:
                 ruamel.yaml.safe_dump(self._waypoints_, f)
             
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "gps_waypoint"
+        marker.ns = "gnss_waypoint"
         marker.color.b = 1.0
         marker.color.g = 1.0
         marker.color.a = 1.0
         
-        marker.scale.x = 0.3
-        marker.scale.y = 0.3
-        marker.scale.z = 0.3
+        marker.scale.x = marker_scale
+        marker.scale.y = marker_scale
+        marker.scale.z = marker_scale
         
         marker.action = Marker.ADD
         marker.type = Marker.POINTS
