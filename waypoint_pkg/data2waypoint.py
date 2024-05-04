@@ -11,10 +11,6 @@ class Data2Waypoint(Node):
         self._waypoint_distance_ = self.declare_parameter("waypoint_distance", 4.0).get_parameter_value().double_value
         self._yaw_deg_thresh_ = self.declare_parameter("yaw_deg_thresh", 15.0).get_parameter_value().double_value
         self._deg_chord_ = self.declare_parameter("deg_chord", 1.0).get_parameter_value().double_value
-        parameter_descriptor = ParameterDescriptor()
-        parameter_descriptor.name = "waypoint_mode"
-        parameter_descriptor.description = "GNSS or SLAM"
-        self._mode_ = self.declare_parameter("mode", "GNSS", parameter_descriptor).get_parameter_value().string_value
         
         self._tf_buffer_ = Buffer()
         self._tf_listener_ = TransformListener(self._tf_buffer_, self)
@@ -57,38 +53,23 @@ class Data2Waypoint(Node):
             self._lat_last_ = self._navsat_fix_data_.latitude
             self._lon_last_ = self._navsat_fix_data_.longitude
         
-        if self._mode_ == "GNSS":
-            quaternion = self._compus_imu_data_.orientation
-            waypoint = pose_to_waypoint(self._gnss_odometry_data_.pose.pose)
-            waypoint['quat_x'] = self._compus_imu_data_.orientation.x
-            waypoint['quat_y'] = self._compus_imu_data_.orientation.y
-            waypoint['quat_z'] = self._compus_imu_data_.orientation.z
-            waypoint['quat_w'] = self._compus_imu_data_.orientation.w
-            waypoint['yaw'] = euler_from_quaternion([
-                waypoint['quat_x'],
-                waypoint['quat_y'],
-                waypoint['quat_z'],
-                waypoint['quat_w']
-            ])[2]
-            waypoint_diff = get_dist_between_geos(
-                self._lat_last_,
-                self._lon_last_,
-                self._navsat_fix_data_.latitude,
-                self._navsat_fix_data_.longitude
-            )
-            marker_scale = 0.8
-        elif self._mode_ == "SLAM":
-            quaternion = self._transform_.transform.rotation
-            pose = Pose()
-            pose.orientation = quaternion
-            waypoint = pose_to_waypoint(pose, self._transform_.transform.translation)
-            waypoint_diff = math.hypot(
-                waypoint['pos_x']
-                - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['pos_x'],
-                waypoint['pos_y']
-                - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['pos_y'],
-            )
-            marker_scale = 0.3            
+        waypoint = pose_to_waypoint(self._gnss_odometry_data_.pose.pose)
+        waypoint['quat_x'] = self._compus_imu_data_.orientation.x
+        waypoint['quat_y'] = self._compus_imu_data_.orientation.y
+        waypoint['quat_z'] = self._compus_imu_data_.orientation.z
+        waypoint['quat_w'] = self._compus_imu_data_.orientation.w
+        waypoint['yaw'] = euler_from_quaternion([
+            waypoint['quat_x'],
+            waypoint['quat_y'],
+            waypoint['quat_z'],
+            waypoint['quat_w']
+        ])[2]
+        waypoint_diff = get_dist_between_geos(
+            self._lat_last_,
+            self._lon_last_,
+            self._navsat_fix_data_.latitude,
+            self._navsat_fix_data_.longitude
+        )
         
         waypoint['longitude'] = self._navsat_fix_data_.longitude
         waypoint['latitude'] = self._navsat_fix_data_.latitude
@@ -102,13 +83,7 @@ class Data2Waypoint(Node):
             - self._waypoints_["waypoints"][len(self._waypoints_["waypoints"]) - 1]['yaw']
         )
         
-        # self.get_logger().debug(
-        #     "No.", self._waypoint_count_,
-        #     " yaw ", waypoint['yaw'] / math.pi * 180.0,
-        #     " yaw_diff ", yaw_diff,
-        #     " waypoint_diff", waypoint_diff
-        # )
-        
+        # Debug
         self.get_logger().debug(
             "No. {}, yaw: {}, yaw_diff: {}, waypoint_diff: {}".format(
                 len(self._waypoints_["waypoints"]), waypoint['yaw'] / math.pi * 180.0,
@@ -136,9 +111,9 @@ class Data2Waypoint(Node):
         marker.color.g = 1.0
         marker.color.a = 1.0
         
-        marker.scale.x = marker_scale
-        marker.scale.y = marker_scale
-        marker.scale.z = marker_scale
+        marker.scale.x = 0.6
+        marker.scale.y = 0.6
+        marker.scale.z = 0.6
         
         marker.action = Marker.ADD
         marker.type = Marker.POINTS
