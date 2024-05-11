@@ -17,6 +17,7 @@
   <depend>waypoint_pkg_interfaces</depend>
   <depend>interactive_markers</depend>
   <depend>std_srvs</depend>
+  <depend>python3-geographiclib</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
