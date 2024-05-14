@@ -12,7 +12,7 @@ from waypoint_pkg.waypoint_utils.utils import (
 class WaypointEditor(Node):
     def __init__(self):
         super().__init__("waypoint_editor")
-        self._waypoints_ = Waypoint.waypoints
+        self._waypoints_ : Waypoint.waypoints
         
         self._read_file_name_ = self.declare_parameter("read_file_name", os.path.join(os.environ['HOME'], "default_waypoint.yaml")).get_parameter_value().string_value
         self._write_file_name_ = self.declare_parameter("write_file_name", os.path.join(os.environ['HOME'], "default_rewaypoint.yaml")).get_parameter_value().string_value

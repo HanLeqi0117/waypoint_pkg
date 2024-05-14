@@ -4,6 +4,7 @@ class Data2Waypoint(Node):
     
     def __init__(self):
         super().__init__("data_to_waypoint")
+        self._waypoints_ : Waypoint.waypoints
         
         self._waypoint_file_ = self.declare_parameter("waypoint_file", os.path.join(os.environ['HOME'], 'default_waypoint.yaml')).get_parameter_value().string_value
         self._target_frame_ = self.declare_parameter("target_frame", "map").get_parameter_value().string_value
@@ -18,7 +19,7 @@ class Data2Waypoint(Node):
         self._compus_imu_data_ = Imu()
         self._navsat_fix_data_ = NavSatFix()
         self._gnss_odometry_data_ = Odometry()
-        self._waypoints_ = {"waypoints" : []}
+        self._waypoints_ = Waypoint.waypoints()
         self._lat_last_ = None
         self._lon_last_ = None
         
@@ -40,6 +41,7 @@ class Data2Waypoint(Node):
         self._gnss_odometry_data_ = msg
     
     def main_process(self):
+        waypoint : Waypoint.waypoint
         
         if self._tf_buffer_.can_transform(self._target_frame_, self._source_frame_, Time()):
             self._transform_ = self._tf_buffer_.lookup_transform(self._target_frame_, self._source_frame_, Time(seconds=0, nanoseconds=0))

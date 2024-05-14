@@ -1,4 +1,4 @@
-import rclpy, ruamel.yaml, os, numpy
+import rclpy, ruamel.yaml, os, numpy, pycurl
 from geographiclib.geodesic import Geodesic
 
 from rclpy.node import Node
@@ -10,7 +10,8 @@ from std_msgs.msg import String
 from geometry_msgs.msg import (
     Point, PoseWithCovariance, Vector3,
     PoseWithCovarianceStamped, Quaternion,
-    PointStamped, PoseStamped, Pose
+    PointStamped, PoseStamped, Pose,
+    PolygonStamped
 )
 from nav_msgs.msg import Odometry
 from geographic_msgs.msg import GeoPose
@@ -37,12 +38,12 @@ class WaypointMode():
         Describe the Mode fo Waypoint with enumeration
         
         Attrs:
-            NORMAL: Noraml navigation mode without specified task
-            SEARCH: Search some objects using image recognition
-            CANCEL: Unkown
-            DIRECT: Unkown
-            STOP: Stop moving when robot has arrived to this waypoint
-            SIGNAL: Execute the task which is the recognition of traffic light
+        - NORMAL: Noraml navigation mode without specified task
+        - SEARCH: Search some objects using image recognition
+        - CANCEL: Unkown
+        - DIRECT: Unkown
+        - STOP: Stop moving when robot has arrived to this waypoint
+        - SIGNAL: Execute the task which is the recognition of traffic light
     """    
     
     NORMAL = 0
@@ -57,49 +58,60 @@ class Waypoint(WaypointMode):
         Description of Waypoint
         
         Attrs:
-            pos_x: position_x
-            pos_y: position_y
-            pos_z: position_z
-            quat_x: quaternion_x
-            quat_y: quaternion_y
-            quat_z: quaternion_z
-            quat_w: quaternion_w
-            roll: roll
-            pitch: pitch
-            yaw: yaw
-            longitude: longitude
-            latitude: latitude
-            mode: mode
-            waypoint: a dictionary with all elements described above
-            wayponits: a dictionary with number of waypoints
-    """    
-    pos_x : float
-    pos_y : float
-    pos_z : float
-    quat_x : float
-    quat_y : float
-    quat_z : float
-    quat_w : float
-    roll : float
-    pitch : float
-    yaw : float
-    longitude : float
-    latitude : float
-    mode : int
+        - waypoint: a dictionary is like (key : value):
+            - pos_x : position_x (float)
+            - pos_y : position_y (float)
+            - pos_z : position_z (float)
+            - quat_x : quaternion_x (float)
+            - quat_y : quaternion_y (float)
+            - quat_z : quaternion_z (float)
+            - quat_w : quaternion_w (float)
+            - roll : roll (float)
+            - pitch : pitch (float)
+            - yaw : yaw (float)
+            - longitude : longitude (float)
+            - latitude : latitude (float)
+            - mode : mode (int)
+        - wayponits : a dictionary is like:
+            - dict["waypoins" : [{}]]
+    """
     
-    waypoint = {}
-    waypoints = {'waypoints' : [waypoint]}
+    waypoint = dict[str, int|float]
+    waypoints = dict[str, list[dict[str, int|float]]]
     
-
+    def get_initial_waypoint():
+        mode = int(Waypoint.NORMAL)
+        waypoint = {
+            "pos_x" : 0.0,
+            "pos_y" : 0.0,
+            "pos_z" : 0.0,
+            "quat_x" : 0.0,
+            "quat_y" : 0.0,
+            "quat_z" : 0.0,
+            "quat_w" : 0.0,
+            "roll" : 0.0,
+            "pitch" : 0.0,
+            "yaw" : 0.0,
+            "longitude" : 0.0,
+            "latitude" : 0.0,
+            "mode" : mode
+        }
+        return waypoint
+    
+    def get_initial_waypoints(key_name : str):
+        waypoints = {key_name : []}
+        return waypoints
+    
+        
 def vector3_to_point(vector3 : Vector3) -> Point:
     """
         Convert Vector3 to Point. Both Vector3 and Point is a kind of ROS Message Interface
         
         Args:
-            vector3: geometry_msgs/msg/Vector3
+        - vector3: geometry_msgs/msg/Vector3
 
         Return:
-            point: geometry_msgs/msg/Point
+        - point: geometry_msgs/msg/Point
     """
     point = Point()
     point.x = vector3.x
@@ -113,11 +125,11 @@ def pose_to_waypoint(pose : Pose, vector : Vector3 = None) -> dict:
         According to geometry_msgs/msg/Pose and Vector3(optional), generate a waypoint whose message type is dictionary
         
         Args:
-            pose: geometry_msgs/msg/Pose
-            vector: geometry_msgs/msg/Vector3(optional). if specified, the orientation settings will follow it accordingly. 
+        - pose: geometry_msgs/msg/Pose
+        - vector: geometry_msgs/msg/Vector3(optional). if specified, the orientation settings will follow it accordingly. 
 
         Return:
-            waypoint: dictionary with localization of robot such as point, orientation and geopose
+        - waypoint: dictionary with localization of robot such as point, orientation and geopose
     """
     waypoint = {}
     rpy = euler_from_quaternion([
@@ -151,12 +163,12 @@ def latLonYaw2Geopose(latitude: float, longitude: float, yaw: float = 0.0) -> Ge
         Return a GeoPose Message using latitude, longitude and yaw
         
         Args:
-            latitude: float
-            longitude: float
-            yaw: 0.0 by default
+        - latitude: float
+        - longitude: float
+        - yaw: 0.0 by default
 
         Return:
-            geopose: geographic_msgs/msg/GeoPose
+        - geopose: geographic_msgs/msg/GeoPose
     """
     geopose = GeoPose()
     geopose.position.latitude = latitude
@@ -169,13 +181,13 @@ def get_midlatlon(lat1 : float, lon1 : float, lat2 : float, lon2 : float) -> lis
         Get the latitude and longitude at the middle position between two waypoints
         
         Args:
-            lat1: latitude of Geopoint No. 1
-            lon1: longitude of Geopoint No. 1
-            lat2: latitude of Geopoint No. 2
-            lon2: longitude of Geopoint No. 2
+        - lat1: latitude of Geopoint No. 1
+        - lon1: longitude of Geopoint No. 1
+        - lat2: latitude of Geopoint No. 2
+        - lon2: longitude of Geopoint No. 2
 
         Return:
-            [latitude, longitude] of Geopoint No. 3 which is at the middle position between No. 1 and No. 2
+        - [latitude, longitude] of Geopoint No. 3 which is at the middle position between No. 1 and No. 2
     """
     
     # Karney's inverse formula
@@ -193,11 +205,11 @@ def latlon_while_waypoint_altered(waypoint_A : dict, waypoint_B : dict) -> list[
         When a waypoint is altered, the latitude and longitude of this waypoint will be with the change of pose
         
         Args:
-            waypoint_A: waypoint before altered
-            waypoint_B: waypoint altered
+        - waypoint_A: waypoint before altered
+        - waypoint_B: waypoint altered
 
         Return:
-            [latitude, longitude] which the waypoint altered should be with
+        - [latitude, longitude] which the waypoint altered should be with
     """    
     
     lat1 = waypoint_A["latitude"]
@@ -215,21 +227,65 @@ def latlon_while_waypoint_altered(waypoint_A : dict, waypoint_B : dict) -> list[
 
     return [result["lat2"], result["lon2"]]
 
-def get_dist_between_geos(lat1 : float, lon1 : float, lat2 : float, lon2 : float):
+def get_dist_between_geos(lat1 : float, lon1 : float, lat2 : float, lon2 : float) -> float:
     """
         Get the distance between two geopoints, unit: m
         
         Args:
-            lat1: latitude of Geopoint No. 1
-            lon1: longitude of Geopoint No. 1
-            lat2: latitude of Geopoint No. 2
-            lon2: longitude of Geopoint No. 2
+        - lat1: latitude of Geopoint No. 1
+        - lon1: longitude of Geopoint No. 1
+        - lat2: latitude of Geopoint No. 2
+        - lon2: longitude of Geopoint No. 2
 
         Return:
-            Distance between two geopoints [m]
+        - Distance between two geopoints [m]
     """     
     
     geod = Geodesic(WGS84["a"], WGS84["f"])
-    g = geod.Inverse(lat1, lon1, lat2, lon2)
+    result = geod.Inverse(lat1, lon1, lat2, lon2)
 
-    return g["s12"]
+    return result["s12"]
+
+def get_yaw_with_geos(lat1 : float, lon1 : float, lat2 : float, lon2 : float) -> list:
+    geod = Geodesic(WGS84["a"], WGS84["f"])
+    result = geod.Inverse(lat1, lon1, lat2, lon2)
+    
+    return result["azi1"]
+
+
+def get_geolocation(rclpy_node : Node, place : str):
+    """
+        Get Geolocation from Internet by giving a place name
+        
+        Args:
+        - rclpy_node : A rclpy.node.Node Object for ros_logger
+        - place : Place name which will give a Geolocation back
+            
+        Return: A list with Geolocation
+        - [Latitude, Longitude]
+    """   
+    
+    c = pycurl.Curl()
+    
+    if " " in place:
+        place = place.split(" ")
+        place = "%20".join(place)
+        
+    c.setopt(pycurl.URL, "https://www.geocoding.jp/kml/?q={}".format(place))
+    
+    if c.setopt(pycurl.RESPONSE_CODE) != 200:
+        rclpy_node.get_logger().info("Couldn't connect to URL, Please check the Network")
+        return [0.0, 0.0]
+    
+    s = c.perform_rs()
+
+    lines = s.split("\n")
+    for line in lines:
+        if "coordinates" in line:
+            line = line[13:]
+            line = line[:-14]
+            longitude, latitude = \
+                float(line.split(",")[0]), \
+                float(line.split(",")[1])
+            
+            return [latitude, longitude]
