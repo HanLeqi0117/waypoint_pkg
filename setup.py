@@ -29,7 +29,9 @@ setup(
             'data2waypoint = waypoint_pkg.data2waypoint:main',
             'waypoint_editor = waypoint_pkg.waypoint_editor:main',
             'waypoint2marker = waypoint_pkg.waypoint2marker:main',
-            'save_topological = waypoint_pkg.save_topological:main'
+            'save_topological = waypoint_pkg.save_topological:main',
+            'initial_geolocation = waypoint_pkg.geocoding_node:main',
+            
         ],
     },
 )

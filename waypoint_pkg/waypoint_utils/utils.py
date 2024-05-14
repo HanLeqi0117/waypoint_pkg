@@ -4,6 +4,7 @@ from geographiclib.geodesic import Geodesic
 from rclpy.node import Node
 from rclpy.duration import Duration
 from rcl_interfaces.msg import ParameterDescriptor
+import rclpy.node
 from rclpy.time import Time
 from rclpy.qos_overriding_options import QoSProfile
 from std_msgs.msg import String
@@ -253,7 +254,7 @@ def get_yaw_with_geos(lat1 : float, lon1 : float, lat2 : float, lon2 : float) ->
     return result["azi1"]
 
 
-def get_geolocation(rclpy_node : Node, place : str):
+def get_geolocation(rclpy_node_name : str, place : str) -> list[float] | None:
     """
         Get Geolocation from Internet by giving a place name
         
@@ -272,13 +273,12 @@ def get_geolocation(rclpy_node : Node, place : str):
         place = "%20".join(place)
         
     c.setopt(pycurl.URL, "https://www.geocoding.jp/kml/?q={}".format(place))
-    
-    if c.setopt(pycurl.RESPONSE_CODE) != 200:
-        rclpy_node.get_logger().info("Couldn't connect to URL, Please check the Network")
-        return [0.0, 0.0]
-    
     s = c.perform_rs()
-
+    
+    if s == None:
+        rclpy.node.get_logger(rclpy_node_name).info("Couldn't connect to URL, Please check the Network")
+        return None
+    
     lines = s.split("\n")
     for line in lines:
         if "coordinates" in line:
