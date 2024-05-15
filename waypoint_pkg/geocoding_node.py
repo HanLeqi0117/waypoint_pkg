@@ -21,8 +21,8 @@ class Geocoding(Node):
             name="tile_map_frame",
             value="origin"
         ).get_parameter_value().string_value
-        self._node_name_waiting_for_ = self.declare_parameter(
-            name="node_name_waiting_for",
+        self._node_waiting_for_ = self.declare_parameter(
+            name="node_waiting_for",
             value="initialize_origin"
         ).get_parameter_value().string_value
         
@@ -33,11 +33,11 @@ class Geocoding(Node):
         rclpy.spin_until_future_complete(self, tf2_futrue)
         self.get_logger().info("Transform [{} -> {}] is OK!".format(self._tile_map_frame_, self._map_frame_))
 
-        while not self.wait_for_node(self._node_name_waiting_for_, 3.0):
-            self.get_logger().info("Waiting for Node [{}] ready.....".format(self._node_name_waiting_for_))
-        self.get_logger().info("Node [{}] is OK".format(self._node_name_waiting_for_))
+        while not self.wait_for_node(self._node_waiting_for_, 3.0):
+            self.get_logger().info("Waiting for Node [{}] ready.....".format(self._node_waiting_for_))
+        self.get_logger().info("Node [{}] is OK".format(self._node_waiting_for_))
         
-        self._initial_geo_pub_ = self.create_publisher(NavSatFix, "/gnss/fix", 5)
+        self._initial_geo_pub_ = self.create_publisher(NavSatFix, "fix", 5)
         
         for index in range(3):
             result = get_geolocation(self.get_name(), self._place_name_)
@@ -49,8 +49,8 @@ class Geocoding(Node):
                 self._initial_geo_pub_.publish(msg)
                 self.get_logger().info(
                     "-- Initialize Geolocation -- \n\t\t\t \
-                        - Latitude: {}\n\t\t\t \
-                        - Longitude: {}".format(result[0], result[1])
+                        - Latitude: {} -\n\t\t\t \
+                        - Longitude: {} -".format(result[0], result[1])
                 )
                 break
             
