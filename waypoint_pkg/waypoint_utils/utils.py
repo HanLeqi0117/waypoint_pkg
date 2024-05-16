@@ -273,6 +273,10 @@ def get_geolocation(rclpy_node_name : str, place : str) -> list[float] | None:
         place = "%20".join(place)
         
     c.setopt(pycurl.URL, "https://www.geocoding.jp/kml/?q={}".format(place))
+    
+    if os.environ["http_proxy"] is not None:
+        c.setopt(pycurl.PROXY, os.environ["http_proxy"])
+        
     s = c.perform_rs()
     
     if s == None:
