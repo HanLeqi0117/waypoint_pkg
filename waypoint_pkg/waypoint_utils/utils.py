@@ -78,7 +78,7 @@ class Waypoint(WaypointMode):
     """
     
     waypoint = dict[str, int|float]
-    waypoints = dict[str, list[dict[str, int|float]]]
+    waypoints = dict[str, list[waypoint]]
     
     def get_initial_waypoint():
         mode = int(Waypoint.NORMAL)
