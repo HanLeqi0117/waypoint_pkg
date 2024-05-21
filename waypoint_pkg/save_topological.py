@@ -51,7 +51,7 @@ class GeoTopologicalMap(Node):
                     waypoints[key_name][size - 1]["longitude"],
                     point.y,
                     point.x
-                )
+                ) - 90
                 waypoints[key_name].append(waypoint)
         
         with open(self._path_, "w+") as f_operator:
