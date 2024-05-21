@@ -46,12 +46,19 @@ class GeoTopologicalMap(Node):
                 waypoint["latitude"] = point.y
                 waypoint["longitude"] = point.x
                 
-                waypoints[key_name][size - 1]["yaw"] = get_yaw_with_geos(
+                yaw = get_yaw_with_geos(
                     waypoints[key_name][size - 1]["latitude"],
                     waypoints[key_name][size - 1]["longitude"],
                     point.y,
                     point.x
                 ) - 90
+                
+                if yaw > 180.0:
+                    yaw = yaw - 360.0
+                elif yaw < -180.0:
+                    yaw = yaw + 360.0
+
+                waypoints[key_name][size - 1]["yaw"] = yaw
                 waypoints[key_name].append(waypoint)
         
         with open(self._path_, "w+") as f_operator:
