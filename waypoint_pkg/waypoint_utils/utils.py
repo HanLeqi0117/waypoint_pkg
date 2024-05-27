@@ -1,5 +1,6 @@
 import rclpy, ruamel.yaml, os, numpy, pycurl
 from geographiclib.geodesic import Geodesic
+from xml.etree import ElementTree
 
 from rclpy.node import Node
 from rclpy.duration import Duration
@@ -267,13 +268,13 @@ def get_geolocation(rclpy_node_name : str, place : str) -> list[float] | None:
     """   
     
     c = pycurl.Curl()
-    
+
     if " " in place:
         place = place.split(" ")
         place = "%20".join(place)
         
-    c.setopt(pycurl.URL, "https://www.geocoding.jp/kml/?q={}".format(place))
-    
+    c.setopt(pycurl.URL, "https://www.geocoding.jp/api/?q={}".format(place))
+
     if os.environ["http_proxy"] is not None:
         c.setopt(pycurl.PROXY, os.environ["http_proxy"])
         
@@ -283,13 +284,14 @@ def get_geolocation(rclpy_node_name : str, place : str) -> list[float] | None:
         rclpy.node.get_logger(rclpy_node_name).info("Couldn't connect to URL, Please check the Network")
         return None
     
-    lines = s.split("\n")
-    for line in lines:
-        if "coordinates" in line:
-            line = line[13:]
-            line = line[:-14]
-            longitude, latitude = \
-                float(line.split(",")[0]), \
-                float(line.split(",")[1])
+    xml_root = ElementTree.fromstring(s)
+    
+    result = []
+
+    for coordinate in xml_root.iter('coordinate'):
+        for lat in coordinate.iter('lat'):
+            result.append(float(lat.text))
+        for lng in coordinate.iter('lng'):
+            result.append(float(lng.text))
             
-            return [latitude, longitude]
+    return result
