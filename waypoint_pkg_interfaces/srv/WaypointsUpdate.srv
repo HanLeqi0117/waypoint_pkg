@@ -1,0 +1,6 @@
+# Request
+waypoint_msgs/Waypoint[] waypoints
+std_msgs/Int16[] waypoint_nums
+---
+# Response
+std_msgs/Bool success
