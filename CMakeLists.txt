@@ -15,35 +15,38 @@ find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
-find_package(waypoint_pkg_interfaces REQUIRED)
+find_package(yaml-cpp REQUIRED)
 find_package(turtlesim REQUIRED)
 
-# 実行ファイルを生成する
-add_executable(waypoint_maker src/twist2txt.cpp)
-add_executable(rewaypoint_loader src/txt2marker.cpp)
+# add exec target
+add_executable(waypoint_recorder src/waypoint_recorder.cpp)
+# add_executable(rewaypoint_loader src/txt2marker.cpp)
 add_executable(waypoint_editor src/marker_server.cpp)
 # add_executable(test_tf2_broadcaster src/test_tf2_broadcaster.cpp)
 
-# インクルードターゲットを追加する
-# このパッケージにおいて、「./include」ディレクトリはターゲットになる
-target_include_directories(waypoint_maker PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_include_directories(rewaypoint_loader PUBLIC
+# add include directory to target
+target_include_directories(waypoint_recorder PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_include_directories(waypoint_editor PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_link_libraries(waypoint_recorder yaml-cpp)
+target_link_libraries(waypoint_editor yaml-cpp)
+# target_include_directories(rewaypoint_loader PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#   $<INSTALL_INTERFACE:include>)
+# target_include_directories(waypoint_editor PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#   $<INSTALL_INTERFACE:include>)
 
-target_compile_features(waypoint_maker PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-target_compile_features(rewaypoint_loader PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-target_compile_features(waypoint_editor PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+# target_compile_features(waypoint_recorder PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+# target_compile_features(rewaypoint_loader PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+# target_compile_features(waypoint_editor PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 ament_target_dependencies(
-  waypoint_maker
+  waypoint_recorder
   "rclcpp"
-  "waypoint_pkg_interfaces"
   "interactive_markers"
   "std_srvs"
   "std_msgs"
@@ -51,38 +54,50 @@ ament_target_dependencies(
   "tf2_geometry_msgs"
   "visualization_msgs"
   "tf2_ros"
-  "turtlesim"
-)
-ament_target_dependencies(
-  rewaypoint_loader
-  "rclcpp"
-  "waypoint_pkg_interfaces"
-  "interactive_markers"
-  "std_srvs"
-  "std_msgs"
-  "geometry_msgs"
-  "tf2_geometry_msgs"
-  "visualization_msgs"
-  "tf2_ros"
-  "turtlesim"
+  "yaml-cpp"
 )
 ament_target_dependencies(
   waypoint_editor
   "rclcpp"
-  "waypoint_pkg_interfaces"
-  "interactive_markers"
-  "std_srvs"
-  "std_msgs"
   "geometry_msgs"
+  "interactive_markers"
   "tf2_geometry_msgs"
   "visualization_msgs"
   "tf2_ros"
-  "turtlesim"
+  "tf2"
+  "yaml-cpp"
 )
+# ament_target_dependencies(
+#   rewaypoint_loader
+#   "rclcpp"
+#   "waypoint_pkg_interfaces"
+#   "interactive_markers"
+#   "std_srvs"
+#   "std_msgs"
+#   "geometry_msgs"
+#   "tf2_geometry_msgs"
+#   "visualization_msgs"
+#   "tf2_ros"
+#   "turtlesim"
+# )
+# ament_target_dependencies(
+#   waypoint_editor
+#   "rclcpp"
+#   "waypoint_pkg_interfaces"
+#   "interactive_markers"
+#   "std_srvs"
+#   "std_msgs"
+#   "geometry_msgs"
+#   "tf2_geometry_msgs"
+#   "visualization_msgs"
+#   "tf2_ros"
+#   "turtlesim"
+# )
 
 
 install(
-  TARGETS waypoint_maker rewaypoint_loader waypoint_editor
+  # TARGETS waypoint_recorder rewaypoint_loader waypoint_editor
+  TARGETS waypoint_recorder waypoint_editor
   DESTINATION lib/${PROJECT_NAME}
 )
 

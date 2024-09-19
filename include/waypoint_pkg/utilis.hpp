@@ -2,36 +2,57 @@
 #define WAYPOINT_PKG_UTLILIS_HPP_
 
 // Cライブラリ
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
+#include <map>
 #include <memory>
+#include <any>
+#include <fstream>
+#include <iostream>
+#include <yaml-cpp/yaml.h>
 
 // ROS2ライブラリ
-#include <std_msgs/msg/string.hpp>
+// #include <std_msgs/msg/string.hpp>
 #include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+// #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <visualization_msgs/msg/interactive_marker.hpp>
+// #include <visualization_msgs/msg/interactive_marker.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <tf2_ros/transform_listener.h>
-#include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
+// #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/LinearMath/Vector3.h>
-#include <waypoint_pkg_interfaces/msg/waypoint.hpp>
-#include <waypoint_pkg_interfaces/srv/waypoints_update.hpp>
 
-using namespace geometry_msgs::msg;
-using namespace visualization_msgs::msg;
-using namespace waypoint_pkg_interfaces::msg;
-using namespace waypoint_pkg_interfaces::srv;
-using namespace std::chrono_literals;
-using namespace std::placeholders;
+namespace Waypoint{
+
+enum WaypointMode {
+    NORMAL = 0,
+    SEARCH = 1,
+    CANCEL = 2,
+    DIRECT = 3,
+    STOP = 4,
+    SIGNAL = 5
+};
+
+struct Waypoint{
+    double pos_x;
+    double pos_y;
+    double pos_z;
+    double quat_x;
+    double quat_y;
+    double quat_z;
+    double quat_w;
+    double roll;
+    double pitch;
+    double yaw;
+    double longitude;
+    double latitude;
+    WaypointMode mode;
+};
+
+// typedef std::map<std::string, std::any> Waypoint;
+typedef std::map<int, Waypoint> Waypoints;
+
+}
+
 
 #endif
