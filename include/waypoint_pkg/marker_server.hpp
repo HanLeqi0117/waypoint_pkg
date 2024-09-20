@@ -143,10 +143,16 @@ class WaypointHandler : public rclcpp::Node
             inter_marker.pose.position.y = wayp_tmp.pos_y;
             inter_marker.pose.position.z = wayp_tmp.pos_z;
 
-            inter_marker.pose.orientation.x = wayp_tmp.quat_x;
-            inter_marker.pose.orientation.y = wayp_tmp.quat_y;
-            inter_marker.pose.orientation.z = wayp_tmp.quat_z;
-            inter_marker.pose.orientation.w = wayp_tmp.quat_w;
+            auto rpy_vector = tf2::Vector3(
+                0.0,
+                0.0,
+                wayp_tmp.yaw
+            );
+
+            inter_marker.pose.orientation.x = rpy_vector.x;
+            inter_marker.pose.orientation.y = rpy_vector.y;
+            inter_marker.pose.orientation.z = rpy_vector.z;
+            inter_marker.pose.orientation.w = rpy_vector.w;
 
             std::stringstream ss;
             inter_marker.name = std::to_string(name);
@@ -197,6 +203,9 @@ class WaypointHandler : public rclcpp::Node
             control.name = "move_y";
             control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
             inter_marker.controls.push_back(control);
+            control.name = "rotate_y";
+            control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+
 
             marker_server->insert(inter_marker);
 
