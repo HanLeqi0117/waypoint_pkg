@@ -130,7 +130,12 @@ class WaypointRecorder : public rclcpp::Node
                 waypoints[waypoint_num] = waypoint;
 
                 // Debug
-                for (int i = 0; i < 20; ++i){waypoints[i] = waypoint;}
+                for (int i = 0; i < 20; ++i){
+                    waypoint.pos_x = i * 3;
+                    waypoint.pos_y = i * 3;
+                    waypoints[i] = waypoint;
+                }
+                
                 waypoint_num++;
                 return;
             }

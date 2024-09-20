@@ -20,17 +20,17 @@ WaypointHandler::~WaypointHandler()
 
 	RCLCPP_DEBUG(get_logger(), "========== Waypoint No. %d ==========", 0);
 	RCLCPP_DEBUG(get_logger(), "Position :");
-	RCLCPP_DEBUG(get_logger(), "          x: %f", waypoints[0].pos_x);
-	RCLCPP_DEBUG(get_logger(), "          y: %f", waypoints[0].pos_y);
-	RCLCPP_DEBUG(get_logger(), "          z: %f", waypoints[0].pos_z);
+	RCLCPP_DEBUG(get_logger(), "          x: %f", waypoints_vector[0].pos_x);
+	RCLCPP_DEBUG(get_logger(), "          y: %f", waypoints_vector[0].pos_y);
+	RCLCPP_DEBUG(get_logger(), "          z: %f", waypoints_vector[0].pos_z);
 	RCLCPP_DEBUG(get_logger(), "Rotation :");
-	RCLCPP_DEBUG(get_logger(), "          roll  : %f", waypoints[0].roll);
-	RCLCPP_DEBUG(get_logger(), "          pitch : %f", waypoints[0].pitch);
-	RCLCPP_DEBUG(get_logger(), "          yaw   : %f", waypoints[0].yaw);
+	RCLCPP_DEBUG(get_logger(), "          roll  : %f", waypoints_vector[0].roll);
+	RCLCPP_DEBUG(get_logger(), "          pitch : %f", waypoints_vector[0].pitch);
+	RCLCPP_DEBUG(get_logger(), "          yaw   : %f", waypoints_vector[0].yaw);
 	RCLCPP_DEBUG(get_logger(), "GNSS :");
-	RCLCPP_DEBUG(get_logger(), "          longitude : %f", waypoints[0].longitude);
-	RCLCPP_DEBUG(get_logger(), "          latitude  : %f", waypoints[0].latitude);
-	RCLCPP_DEBUG(get_logger(), "Mode : %d", waypoints[0].mode);
+	RCLCPP_DEBUG(get_logger(), "          longitude : %f", waypoints_vector[0].longitude);
+	RCLCPP_DEBUG(get_logger(), "          latitude  : %f", waypoints_vector[0].latitude);
+	RCLCPP_DEBUG(get_logger(), "Mode : %d", waypoints_vector[0].mode);
 	RCLCPP_DEBUG(get_logger(), "========== Waypoint No. %d ==========", 0);
 
     if(this->ofs.is_open())ofs.close();
@@ -50,97 +50,106 @@ void WaypointHandler::initialize()
 	sub_menu_entry_id["STOP"] = menu_handler.insert(main_menu_entry_id["Mode"], "STOP", std::bind(&WaypointHandler::process_feedback, this, _1));
 	sub_menu_entry_id["SIGNAL"] = menu_handler.insert(main_menu_entry_id["Mode"], "SIGNAL", std::bind(&WaypointHandler::process_feedback, this, _1));
 	
-	for (auto &&waypoint : waypoints){
-		make_marker(waypoint.first, waypoint.second);
+	for (int i = 0; i < static_cast<int>(waypoints_vector.size()); i++){
+		make_marker(i, waypoints_vector[i]);
 	}
 	
 	// 変更を有効にする
 	marker_server->applyChanges();
 }
 
-void WaypointHandler::process_feedback(InteractiveMarkerFeedback::ConstSharedPtr feedback)
-{
-	unsigned int index = std::stoi(feedback->marker_name);
+void WaypointHandler::process_feedback(InteractiveMarkerFeedback::ConstSharedPtr feedback){
+
 	// 選択条件：「feedback」のメンバ「event_type」
 	switch(feedback->event_type)
 	{
 		// このマーカーの位置は、既に定義された制御手法によって変更された場合
 		case InteractiveMarkerFeedback::POSE_UPDATE:
 		{
-			waypoints[index].pos_x = feedback->pose.position.x;
-			waypoints[index].pos_y = feedback->pose.position.y;
-			waypoints[index].pos_z = feedback->pose.position.z;
-			waypoints[index].quat_x = feedback->pose.orientation.x;
-			waypoints[index].quat_y = feedback->pose.orientation.y;
-			waypoints[index].quat_z = feedback->pose.orientation.z;
-			waypoints[index].quat_w = feedback->pose.orientation.w;
+			unsigned int index = std::stoi(feedback->marker_name);
+			waypoints_vector[index].pos_x = feedback->pose.position.x;
+			waypoints_vector[index].pos_y = feedback->pose.position.y;
+			waypoints_vector[index].pos_z = feedback->pose.position.z;
+			waypoints_vector[index].quat_x = feedback->pose.orientation.x;
+			waypoints_vector[index].quat_y = feedback->pose.orientation.y;
+			waypoints_vector[index].quat_z = feedback->pose.orientation.z;
+			waypoints_vector[index].quat_w = feedback->pose.orientation.w;
 			tf2::Quaternion tf2_quat;
 			tf2::fromMsg(feedback->pose.orientation, tf2_quat);
 			tf2::Matrix3x3(tf2_quat).getRPY(
-				waypoints[index].roll,
-				waypoints[index].pitch,
-				waypoints[index].yaw       
+				waypoints_vector[index].roll,
+				waypoints_vector[index].pitch,
+				waypoints_vector[index].yaw       
 			);
-			publish_line();
+			publish_line();				
 			break;
 		}
 
 		case InteractiveMarkerFeedback::MENU_SELECT:
 		{
+			unsigned int index = std::stoi(feedback->marker_name);
 			std::stringstream ss;
-            ss << "Menu" << feedback->menu_entry_id << " selected" << std::endl;
+            ss << "Menu " << feedback->menu_entry_id << " is selected";
             RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
 			
 			if(feedback->menu_entry_id == main_menu_entry_id["Delete"]){
 				std::stringstream ss;
-                ss << "No" << index << "is deleted." << std::endl;
+                ss << "No. " << index << " is deleted.";
                 RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
 				erase_marker(index);
+				waypoints_vector.erase(waypoints_vector.begin() + index);
+				make_all_marker(index);
+				publish_line();
 			}
 
 			if(feedback->menu_entry_id == main_menu_entry_id["Insert"]){
 				std::stringstream ss;
-                ss << "No" << index << "insert" << std::endl;
+                ss  << "Insert a Waypoint behind Waypoint No. " << index;
                 RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
                 insert_marker(index);
             }
 
 			if(feedback->menu_entry_id == main_menu_entry_id["Info"]){
 				std::stringstream ss;
-                ss << "No" << index << "insert" << std::endl;
+                ss << "Show The information of the Waypoint No. " << index;
                 RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
                 print_waypoint_info(index);
             }
 
-			if(feedback->menu_entry_id == main_menu_entry_id["Mode"]){
-				RCLCPP_INFO(get_logger(), "Change mode menu is selected");
+			if(feedback->menu_entry_id >= main_menu_entry_id["Mode"]){
+				RCLCPP_INFO(get_logger(), "Change Mode Menu is selected");
+
+				if (feedback->menu_entry_id == sub_menu_entry_id["NORMAL"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::NORMAL;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to NORMAL", index);
+				} else if (feedback->menu_entry_id == sub_menu_entry_id["SEARCH"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::SEARCH;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to SEARCH", index);
+				} else if (feedback->menu_entry_id == sub_menu_entry_id["CANCEL"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::CANCEL;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to CANCEL", index);
+				} else if (feedback->menu_entry_id == sub_menu_entry_id["DIRECT"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::DIRECT;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to DIRECT", index);
+				} else if (feedback->menu_entry_id == sub_menu_entry_id["STOP"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::STOP;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to STOP", index);
+					publish_line();				
+				} else if (feedback->menu_entry_id == sub_menu_entry_id["SIGNAL"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::SIGNAL;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to SIGNAL", index);
+				}
+
+				marker_server->erase(std::to_string(index));
+				marker_server->applyChanges();
+				make_marker(index, waypoints_vector[index]);
+
 			}
 
-			if (feedback->menu_entry_id == sub_menu_entry_id["NORMAL"]) {
-				waypoints[index].mode = Waypoint::WaypointMode::NORMAL;
-				RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to NORMAL", index);
-			} else if (feedback->menu_entry_id == sub_menu_entry_id["SEARCH"]) {
-				waypoints[index].mode = Waypoint::WaypointMode::SEARCH;
-				RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to SEARCH", index);
-			} else if (feedback->menu_entry_id == sub_menu_entry_id["CANCEL"]) {
-				waypoints[index].mode = Waypoint::WaypointMode::CANCEL;
-				RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to CANCEL", index);
-			} else if (feedback->menu_entry_id == sub_menu_entry_id["DIRECT"]) {
-				waypoints[index].mode = Waypoint::WaypointMode::DIRECT;
-				RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to DIRECT", index);
-			} else if (feedback->menu_entry_id == sub_menu_entry_id["STOP"]) {
-				waypoints[index].mode = Waypoint::WaypointMode::STOP;
-				RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to STOP", index);
-			} else if (feedback->menu_entry_id == sub_menu_entry_id["SIGNAL"]) {
-				waypoints[index].mode = Waypoint::WaypointMode::SIGNAL;
-				RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to SIGNAL", index);
-			}
-
-			erase_marker(index);
-			make_all_marker(index);
-			publish_line();
 			break;
 		}
+
+	
 	}
 	// 変更を有効にする
 	marker_server->applyChanges();

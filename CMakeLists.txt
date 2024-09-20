@@ -5,8 +5,14 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+#add_compile_options(-std=c++11)
+if(NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
+
+
 # find dependencies
-find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_auto REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -18,10 +24,13 @@ find_package(visualization_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(turtlesim REQUIRED)
 
+ament_auto_find_build_dependencies()
+include_directories(include)
+
 # add exec target
-add_executable(waypoint_recorder src/waypoint_recorder.cpp)
+ament_auto_add_executable(waypoint_recorder src/waypoint_recorder.cpp)
 # add_executable(rewaypoint_loader src/txt2marker.cpp)
-add_executable(waypoint_editor src/marker_server.cpp)
+ament_auto_add_executable(waypoint_editor src/marker_server.cpp)
 # add_executable(test_tf2_broadcaster src/test_tf2_broadcaster.cpp)
 
 # add include directory to target
@@ -94,16 +103,9 @@ ament_target_dependencies(
 #   "turtlesim"
 # )
 
-
-install(
-  # TARGETS waypoint_recorder rewaypoint_loader waypoint_editor
-  TARGETS waypoint_recorder waypoint_editor
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 install(
   DIRECTORY launch
-  DESTINATION lib/${PROJECT_NAME}
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
@@ -118,4 +120,4 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_package()
+ament_auto_package()

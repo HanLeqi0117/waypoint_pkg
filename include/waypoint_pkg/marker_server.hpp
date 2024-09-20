@@ -28,7 +28,6 @@ class WaypointHandler : public rclcpp::Node
                     for (YAML::const_iterator it = doc.begin(); it != doc.end(); ++it) {
                         
                         Waypoint::Waypoint waypoint;
-                        int key = it->first.as<int>();
                         const YAML::Node& data = it->second;
 
                         waypoint.pos_x = data["position_x"].as<double>();
@@ -45,9 +44,10 @@ class WaypointHandler : public rclcpp::Node
                         waypoint.latitude = data["latitude"].as<double>();
                         waypoint.mode = static_cast<Waypoint::WaypointMode>(data["mode"].as<int>());
 
-                        waypoints[key] = waypoint;
+                        waypoints_vector.push_back(waypoint);
                     }
                 }
+
             } catch (const YAML::Exception& e) {
                 std::stringstream ss;
                 ss << "YAML Exception: " << e.what();
@@ -67,29 +67,31 @@ class WaypointHandler : public rclcpp::Node
         void save_file(){
             // YAML::Node inner_node;
             YAML::Emitter out;
-            if (waypoints.size() == 0 && waypoints.empty()){
+            if (waypoints_vector.size() == 0){
                 RCLCPP_WARN(get_logger(), "There is no data to write! Please check your input yaml file path and its content.");
                 return;
             }
-
-            for (auto &&pair : waypoints)
+            int index = 0;
+            for (auto &&waypoint : waypoints_vector)
             {
                 out << YAML::BeginMap;
-                out << YAML::Key << pair.first << YAML::Value << YAML::BeginMap;
-                out << YAML::Key << "position_x" << YAML::Value << pair.second.pos_x;
-                out << YAML::Key << "position_y" << YAML::Value << pair.second.pos_y;
-                out << YAML::Key << "position_z" << YAML::Value << pair.second.pos_z;
-                out << YAML::Key << "quaternion_x" << YAML::Value << pair.second.quat_x;
-                out << YAML::Key << "quaternion_y" << YAML::Value << pair.second.quat_y;
-                out << YAML::Key << "quaternion_z" << YAML::Value << pair.second.quat_z;
-                out << YAML::Key << "quaternion_w" << YAML::Value << pair.second.quat_w;
-                out << YAML::Key << "roll" << YAML::Value << pair.second.roll;
-                out << YAML::Key << "pitch" << YAML::Value << pair.second.pitch;
-                out << YAML::Key << "yaw" << YAML::Value << pair.second.yaw;
-                out << YAML::Key << "longitude" << YAML::Value << pair.second.longitude;
-                out << YAML::Key << "latitude" << YAML::Value << pair.second.latitude;
-                out << YAML::Key << "mode" << YAML::Value << int(pair.second.mode);
-                out << YAML::EndMap << YAML::EndMap; 
+                out << YAML::Key << index << YAML::Value << YAML::BeginMap;
+                out << YAML::Key << "position_x" << YAML::Value << waypoint.pos_x;
+                out << YAML::Key << "position_y" << YAML::Value << waypoint.pos_y;
+                out << YAML::Key << "position_z" << YAML::Value << waypoint.pos_z;
+                out << YAML::Key << "quaternion_x" << YAML::Value << waypoint.quat_x;
+                out << YAML::Key << "quaternion_y" << YAML::Value << waypoint.quat_y;
+                out << YAML::Key << "quaternion_z" << YAML::Value << waypoint.quat_z;
+                out << YAML::Key << "quaternion_w" << YAML::Value << waypoint.quat_w;
+                out << YAML::Key << "roll" << YAML::Value << waypoint.roll;
+                out << YAML::Key << "pitch" << YAML::Value << waypoint.pitch;
+                out << YAML::Key << "yaw" << YAML::Value << waypoint.yaw;
+                out << YAML::Key << "longitude" << YAML::Value << waypoint.longitude;
+                out << YAML::Key << "latitude" << YAML::Value << waypoint.latitude;
+                out << YAML::Key << "mode" << YAML::Value << int(waypoint.mode);
+                out << YAML::EndMap << YAML::EndMap;
+
+                index++;
             }
             
             ofs = std::ofstream(write_file_name);
@@ -114,7 +116,7 @@ class WaypointHandler : public rclcpp::Node
         std::map<std::string, uint32_t> sub_menu_entry_id;
 
         std::shared_ptr<InteractiveMarkerServer> marker_server;
-        Waypoint::Waypoints waypoints;
+        std::vector<Waypoint::Waypoint> waypoints_vector;
         rclcpp::Publisher<Marker>::SharedPtr marker_pub;
         MenuHandler menu_handler;
         std::ofstream ofs;
@@ -139,7 +141,7 @@ class WaypointHandler : public rclcpp::Node
             inter_marker.scale = 1;
             inter_marker.pose.position.x = wayp_tmp.pos_x;
             inter_marker.pose.position.y = wayp_tmp.pos_y;
-            inter_marker.pose.position.z = 0.2;
+            inter_marker.pose.position.z = wayp_tmp.pos_z;
 
             inter_marker.pose.orientation.x = wayp_tmp.quat_x;
             inter_marker.pose.orientation.y = wayp_tmp.quat_y;
@@ -148,7 +150,7 @@ class WaypointHandler : public rclcpp::Node
 
             std::stringstream ss;
             inter_marker.name = std::to_string(name);
-            ss << "No." << inter_marker.name.c_str() << "-" << "mode." << get_mode_name(static_cast<int>(wayp_tmp.mode));
+            ss << "No." << inter_marker.name.c_str();
             inter_marker.description = ss.str().c_str();
 
             InteractiveMarkerControl control, arrow_control;
@@ -210,8 +212,8 @@ class WaypointHandler : public rclcpp::Node
         // 機能：Waypointのコンテナに基づいて「start」番号からマーカーを作成する
         void make_all_marker(int start){
 
-            for(int i = start; i < static_cast<int>(waypoints.size()); i++){
-                make_marker(i, waypoints[i]);
+            for(int i = start; i < static_cast<int>(waypoints_vector.size()); i++){
+                make_marker(i, waypoints_vector[i]);
             }
             marker_server->applyChanges();
         }
@@ -219,64 +221,57 @@ class WaypointHandler : public rclcpp::Node
         // 引数：Waypointの番号
         // 機能：「start」番号からすべてのマーカーを削除する
         void erase_marker(int start){
-            for(int i = start; i < static_cast<int>(waypoints.size()); i++){
+            for(int i = start; i < static_cast<int>(waypoints_vector.size()); i++){
                 marker_server->erase(std::to_string(i));
             }
 	
-            erase_waypoint(start);
             marker_server->applyChanges();
         }
 
         // 引数：挿入する場所を示す番号
         // 機能：「name」の後ろに一つWaypointを挿入する
         void insert_marker(int name){
-            if (name == static_cast<int>(waypoints.size())){
+            erase_marker(name);
+            Waypoint::Waypoint waypoint_new = waypoints_vector[name];
+            int waypoints_last_number = static_cast<int>(waypoints_vector.size() - 1);
+
+            if (name == waypoints_last_number){
                 RCLCPP_WARN(get_logger(), "You selected the end of Waypoint, and couldn't insert a waypoint behind.");
                 return;
             }
 
-            Waypoint::Waypoint waypoint_new;
             waypoint_new.pos_x = (
-                waypoints[name].pos_x + 
-                waypoints[name + 1].pos_x
+                waypoints_vector[name].pos_x + 
+                waypoints_vector[name + 1].pos_x
             ) / 2;
             waypoint_new.pos_y = (
-                waypoints[name].pos_y + 
-                waypoints[name + 1].pos_y
+                waypoints_vector[name].pos_y + 
+                waypoints_vector[name + 1].pos_y
             ) / 2;
             waypoint_new.mode = Waypoint::WaypointMode::NORMAL;
+            waypoints_vector.insert(waypoints_vector.begin() + name + 1, waypoint_new);
 
-            for (int index = static_cast<int>(waypoints.size()); index > name; --index) {
-                waypoints[index + 1] = waypoints[index];
-            }
-            waypoints[name + 1] = waypoint_new;
+            make_all_marker(name);
+            publish_line();
+            marker_server->applyChanges();
 
-        }
-
-        void erase_waypoint(int waypoint_number){
-            waypoints.erase(waypoint_number);
-            int newkey = 0;
-            for (auto &&waypoint : waypoints){
-                waypoints[newkey] = waypoint.second;
-                newkey ++;
-            }
         }
 
         void print_waypoint_info(int waypoint_number){
 
             RCLCPP_INFO(get_logger(), "========== Waypoint No. %d ==========", waypoint_number);
             RCLCPP_INFO(get_logger(), "Position :");
-            RCLCPP_INFO(get_logger(), "          x: %f", waypoints[waypoint_number].pos_x);
-            RCLCPP_INFO(get_logger(), "          y: %f", waypoints[waypoint_number].pos_y);
-            RCLCPP_INFO(get_logger(), "          z: %f", waypoints[waypoint_number].pos_z);
+            RCLCPP_INFO(get_logger(), "          x: %f", waypoints_vector[waypoint_number].pos_x);
+            RCLCPP_INFO(get_logger(), "          y: %f", waypoints_vector[waypoint_number].pos_y);
+            RCLCPP_INFO(get_logger(), "          z: %f", waypoints_vector[waypoint_number].pos_z);
             RCLCPP_INFO(get_logger(), "Rotation :");
-            RCLCPP_INFO(get_logger(), "          roll  : %f", waypoints[waypoint_number].roll);
-            RCLCPP_INFO(get_logger(), "          pitch : %f", waypoints[waypoint_number].pitch);
-            RCLCPP_INFO(get_logger(), "          yaw   : %f", waypoints[waypoint_number].yaw);
+            RCLCPP_INFO(get_logger(), "          roll  : %f", waypoints_vector[waypoint_number].roll);
+            RCLCPP_INFO(get_logger(), "          pitch : %f", waypoints_vector[waypoint_number].pitch);
+            RCLCPP_INFO(get_logger(), "          yaw   : %f", waypoints_vector[waypoint_number].yaw);
             RCLCPP_INFO(get_logger(), "GNSS :");
-            RCLCPP_INFO(get_logger(), "          longitude : %f", waypoints[waypoint_number].longitude);
-            RCLCPP_INFO(get_logger(), "          latitude  : %f", waypoints[waypoint_number].latitude);
-            switch (static_cast<Waypoint::WaypointMode>(waypoints[waypoint_number].mode)){
+            RCLCPP_INFO(get_logger(), "          longitude : %f", waypoints_vector[waypoint_number].longitude);
+            RCLCPP_INFO(get_logger(), "          latitude  : %f", waypoints_vector[waypoint_number].latitude);
+            switch (static_cast<Waypoint::WaypointMode>(waypoints_vector[waypoint_number].mode)){
                 case Waypoint::WaypointMode::NORMAL:
                     RCLCPP_INFO(get_logger(), "Mode : NORMAL");
                     break;
@@ -298,7 +293,7 @@ class WaypointHandler : public rclcpp::Node
                 default:
                     break;
             }
-            RCLCPP_INFO(get_logger(), "========== Waypoint No. %d ==========", 0);            
+            RCLCPP_INFO(get_logger(), "========== Waypoint No. %d ==========", waypoint_number);            
             return;
         }
 
@@ -315,12 +310,12 @@ class WaypointHandler : public rclcpp::Node
             line_strip.scale.x = 0.1;
             line_strip.color.b = 1.0;
             line_strip.color.a = 1.0;
-            for (auto &&waypoint : waypoints)
+            for (auto &&waypoint : waypoints_vector)
             {
                 geometry_msgs::msg::Point point_tmp;
-                point_tmp.x = waypoint.second.pos_x;
-                point_tmp.y = waypoint.second.pos_y;
-                point_tmp.z = waypoint.second.pos_z;
+                point_tmp.x = waypoint.pos_x;
+                point_tmp.y = waypoint.pos_y;
+                point_tmp.z = waypoint.pos_z;
 
                 line_strip.points.push_back(point_tmp);
             }
