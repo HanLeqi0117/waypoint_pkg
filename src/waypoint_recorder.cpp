@@ -114,9 +114,9 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.pos_y = transform.transform.translation.y;
             waypoint.pos_z = transform.transform.translation.z;
             waypoint.quat_x = transform.transform.rotation.x;
-            waypoint.quat_y = transform.transform.rotation.x;
-            waypoint.quat_z = transform.transform.rotation.x;
-            waypoint.quat_w = transform.transform.rotation.x;
+            waypoint.quat_y = transform.transform.rotation.y;
+            waypoint.quat_z = transform.transform.rotation.z;
+            waypoint.quat_w = transform.transform.rotation.w;
 
             if(waypoint_num == 0)
             {   
@@ -130,11 +130,11 @@ class WaypointRecorder : public rclcpp::Node
                 waypoints[waypoint_num] = waypoint;
 
                 // Debug
-                for (int i = 0; i < 20; ++i){
-                    waypoint.pos_x = i * 3;
-                    waypoint.pos_y = i * 3;
-                    waypoints[i] = waypoint;
-                }
+                // for (int i = 0; i < 20; ++i){
+                //     waypoint.pos_x = i * 3;
+                //     waypoint.pos_y = i * 3;
+                //     waypoints[i] = waypoint;
+                // }
                 
                 waypoint_num++;
                 return;

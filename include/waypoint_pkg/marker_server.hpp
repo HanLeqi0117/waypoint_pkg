@@ -142,11 +142,25 @@ class WaypointHandler : public rclcpp::Node
             inter_marker.pose.position.x = wayp_tmp.pos_x;
             inter_marker.pose.position.y = wayp_tmp.pos_y;
             inter_marker.pose.position.z = wayp_tmp.pos_z;
-
             inter_marker.pose.orientation.x = wayp_tmp.quat_x;
             inter_marker.pose.orientation.y = wayp_tmp.quat_y;
             inter_marker.pose.orientation.z = wayp_tmp.quat_z;
             inter_marker.pose.orientation.w = wayp_tmp.quat_w;
+
+            // if (name != wayp_tmp.size() - 1) {
+
+            //     double delta_x = waypoints_vector[name + 1].pos_x - wayp_tmp.pos_x;
+            //     double delta_y = waypoints_vector[name + 1].pos_y - wayp_tmp.pos_y;
+            //     double delta_z = waypoints_vector[name + 1].pos_z - wayp_tmp.pos_z;
+            //     double yaw = std::atan(delta_y, delta_x);
+            //     double pitch = std::atan(delta_z, std::sqrt(delta_x * delta_x + delta_y + delta_y));
+            //     auto quaternion = tf2::Quaternion(yaw, pitch, roll);
+            //     auto quaternion_msg = tf2::toMsg(quaternion);
+
+            //     inter_marker.pose.orientation = quaternion_msg;
+            // } else {
+
+            // }
 
             std::stringstream ss;
             inter_marker.name = std::to_string(name);
@@ -159,16 +173,17 @@ class WaypointHandler : public rclcpp::Node
             arrow_control.always_visible = true;
             control.independent_marker_orientation = true;
 
-            arrow_control.interaction_mode = InteractiveMarkerControl::MOVE_PLANE;
+            // arrow_control.interaction_mode = InteractiveMarkerControl::MOVE_PLANE;
+            arrow_control.interaction_mode = InteractiveMarkerControl::FIXED;
 
             Marker arrow_marker;
             arrow_marker.type = Marker::ARROW;
-            arrow_marker.scale.x = 0.5;
-            arrow_marker.scale.y = 0.1;
-            arrow_marker.scale.z = 0.1;
-            arrow_marker.color.r = 0.65;
-            arrow_marker.color.g = 0.65;
-            arrow_marker.color.b = 0.65;
+            arrow_marker.scale.x = 1.0;
+            arrow_marker.scale.y = 0.35;
+            arrow_marker.scale.z = 0.35;
+            arrow_marker.color.r = 0.4;
+            arrow_marker.color.g = 1.0;
+            arrow_marker.color.b = 0.9;
             arrow_marker.color.a = 1.0;
 
             arrow_control.markers.push_back(arrow_marker);
@@ -196,6 +211,9 @@ class WaypointHandler : public rclcpp::Node
             control.orientation.z = 1;
             control.name = "move_y";
             control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
+            inter_marker.controls.push_back(control);
+            control.name = "rotate_y";
+            control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
             inter_marker.controls.push_back(control);
 
             marker_server->insert(inter_marker);
