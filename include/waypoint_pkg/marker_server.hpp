@@ -165,16 +165,17 @@ class WaypointHandler : public rclcpp::Node
             arrow_control.always_visible = true;
             control.independent_marker_orientation = true;
 
-            arrow_control.interaction_mode = InteractiveMarkerControl::MOVE_PLANE;
+            // arrow_control.interaction_mode = InteractiveMarkerControl::MOVE_PLANE;
+            arrow_control.interaction_mode = InteractiveMarkerControl::FIXED;
 
             Marker arrow_marker;
             arrow_marker.type = Marker::ARROW;
-            arrow_marker.scale.x = 0.5;
+            arrow_marker.scale.x = 1.0;
             arrow_marker.scale.y = 0.1;
             arrow_marker.scale.z = 0.1;
-            arrow_marker.color.r = 0.65;
-            arrow_marker.color.g = 0.65;
-            arrow_marker.color.b = 0.65;
+            arrow_marker.color.r = 0.2;
+            arrow_marker.color.g = 0.6;
+            arrow_marker.color.b = 0.2;
             arrow_marker.color.a = 1.0;
 
             arrow_control.markers.push_back(arrow_marker);
@@ -192,19 +193,24 @@ class WaypointHandler : public rclcpp::Node
             control.orientation.x = 0;
             control.orientation.y = 1;
             control.orientation.z = 0;
-            control.name = "rotate_z";
-            control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-            inter_marker.controls.push_back(control);
-
-            control.orientation.w = 1;
-            control.orientation.x = 0;
-            control.orientation.y = 0;
-            control.orientation.z = 1;
             control.name = "move_y";
             control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
             inter_marker.controls.push_back(control);
             control.name = "rotate_y";
             control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+            inter_marker.controls.push_back(control);            
+
+            control.orientation.w = 1;
+            control.orientation.x = 0;
+            control.orientation.y = 0;
+            control.orientation.z = 1;
+            control.name = "move_z";
+            control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
+            inter_marker.controls.push_back(control);
+            control.name = "rotate_z";
+            control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+            inter_marker.controls.push_back(control);
+
 
 
             marker_server->insert(inter_marker);
