@@ -10,7 +10,6 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
-  <depend>waypoint_pkg_interfaces</depend>
   <depend>interactive_markers</depend>
   <depend>tf2_ros</depend>
   <depend>std_msgs</depend>
