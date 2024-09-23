@@ -178,9 +178,9 @@ class WaypointHandler : public rclcpp::Node
 
             Marker arrow_marker;
             arrow_marker.type = Marker::ARROW;
-            arrow_marker.scale.x = 1.0;
-            arrow_marker.scale.y = 0.35;
-            arrow_marker.scale.z = 0.35;
+            arrow_marker.scale.x = 0.9;
+            arrow_marker.scale.y = 0.25;
+            arrow_marker.scale.z = 0.25;
             arrow_marker.color.r = 0.4;
             arrow_marker.color.g = 1.0;
             arrow_marker.color.b = 0.9;
@@ -201,6 +201,9 @@ class WaypointHandler : public rclcpp::Node
             control.orientation.x = 0;
             control.orientation.y = 1;
             control.orientation.z = 0;
+            control.name = "move_z";
+            control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
+            inter_marker.controls.push_back(control);            
             control.name = "rotate_z";
             control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
             inter_marker.controls.push_back(control);
