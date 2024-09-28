@@ -32,7 +32,7 @@ class WaypointHandler : public rclcpp::Node
 
                         waypoint.pos_x = data["position_x"].as<double>();
                         waypoint.pos_y = data["position_y"].as<double>();
-                        waypoint.pos_z = data["position_z"].as<double>();
+                        waypoint.pos_z = 0.2;
                         waypoint.quat_x = data["quaternion_x"].as<double>();
                         waypoint.quat_y = data["quaternion_y"].as<double>();
                         waypoint.quat_z = data["quaternion_z"].as<double>();
