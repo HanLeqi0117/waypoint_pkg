@@ -21,6 +21,8 @@
 #include <tf2_ros/buffer.h>
 // #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/LinearMath/Vector3.h>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
 
 namespace Waypoint{
 

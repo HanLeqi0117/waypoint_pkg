@@ -5,22 +5,27 @@ class WaypointRecorder : public rclcpp::Node
 {
     public:
 
-        WaypointRecorder() : Node("waypoint_recorder"), waypoint_num(0)
+        WaypointRecorder() : Node("waypoint_recorder"), waypoint_num(0), lonlat{0.0, 0.0, 0.0}
         {
             // Declare ROS Parameters
             waypoint_file_path = this->declare_parameter<std::string>("waypoint_file_path", std::string(std::getenv("HOME")) + "/Documents/test_waypoint_recorder.yaml");
             source_frame = this->declare_parameter<std::string>("source_frame", "map");
             target_frame = this->declare_parameter<std::string>("target_frame", "base_link");
+            topic_name = this->declare_parameter<std::string>("topic_name", "odom");
             delta_distance = this->declare_parameter<double>("delta_distance", 4.0);
             delta_yaw = this->declare_parameter<double>("delta_yaw", 15.0);
             delta_chrod = this->declare_parameter<double>("delta_chrod", 1.0);
             rate = this->declare_parameter<double>("rate", 20.0);
             with_rviz = this->declare_parameter<bool>("with_rviz", false);
+            with_gnss = this->declare_parameter<bool>("with_gnss", false);
+            from_topic = this->declare_parameter<bool>("from_topic", false);
 
             tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
             tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
             waypoints[0] = Waypoint::Waypoint();
+
+            auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>("gnss/fix", rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
 
             ofs.open(waypoint_file_path);
 
@@ -36,7 +41,14 @@ class WaypointRecorder : public rclcpp::Node
                 this->marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("waypoint_marker", marker_pub_qos);
             }
 
-            this->timer = this->create_wall_timer(std::chrono::milliseconds(int(1000 / rate)), std::bind(&WaypointRecorder::main_callback, this));
+            if (from_topic) {
+                auto odom_sub_qos = rclcpp::Qos(100);
+                auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, odom_sub_qos, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
+            }
+            else {
+                this->timer = this->create_wall_timer(std::chrono::milliseconds(int(1000 / rate)), std::bind(&WaypointRecorder::main_callback, this));
+            }
+
         }
 
         ~WaypointRecorder()
@@ -73,19 +85,26 @@ class WaypointRecorder : public rclcpp::Node
         std::string waypoint_file_path;
         std::string source_frame;
         std::string target_frame;
+        std::string topic_name;
         double delta_distance;
         double delta_yaw;
         double delta_chrod;
         double rate;
         bool with_rviz;
+        bool with_gnss;
+        bool from_topic;
         
         std::ofstream ofs;
 
         int waypoint_num;
+        std::vecotr<float> lonlat;
         Waypoint::Waypoints waypoints;
         
         std::unique_ptr<tf2_ros::Buffer> tf_buffer;
         std::shared_ptr<tf2_ros::TransformListener> tf_listener;
+        
+        rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
+        rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr navsat_fix_sub;
 
         geometry_msgs::msg::TransformStamped transform;
 
@@ -117,6 +136,14 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.quat_y = transform.transform.rotation.y;
             waypoint.quat_z = transform.transform.rotation.z;
             waypoint.quat_w = transform.transform.rotation.w;
+            rclcpp::Time transform_stamp(transform.header.stamp);
+            if abs(transform_stamp.nanoseconds() * 1e-9 - lonlat[0]) <= 0.5 {
+                waypoint.longitude = lonlat[1];
+                waypoint.latitude = lonlat[2];
+            } else {
+                waypoint.longitude = 0.0;
+                waypoint.latitude = 0.0;
+            }
 
             if(waypoint_num == 0)
             {   
@@ -197,6 +224,103 @@ class WaypointRecorder : public rclcpp::Node
 
                 this->marker_pub->publish(marker_points);        
             }            
+        }
+    
+        void get_odom_msg(nav_msgs::msg::Odometry::ConstSharedPtr& msg){
+            // Get an empty waypoint
+            Waypoint::Waypoint waypoint = {};
+            waypoint.pos_x = msg->pose.position.x;
+            waypoint.pos_y = msg->pose.position.y;
+            waypoint.pos_z = msg->pose.position.z;
+            waypoint.quat_x = msg->pose.orientation.x;
+            waypoint.quat_y = msg->pose.orientation.y;
+            waypoint.quat_z = msg->pose.orientation.z;
+            waypoint.quat_w = msg->pose.orientation.w;
+
+            if(waypoint_num == 0)
+            {   
+                tf2::Quaternion tf2_quat;
+                tf2::fromMsg(msg->pose.orientation, tf2_quat);
+                tf2::Matrix3x3(tf2_quat).getRPY(
+                    waypoint.roll,
+                    waypoint.pitch,
+                    waypoint.yaw            
+                );
+                waypoints[waypoint_num] = waypoint;
+
+                // Debug
+                // for (int i = 0; i < 20; ++i){
+                //     waypoint.pos_x = i * 3;
+                //     waypoint.pos_y = i * 3;
+                //     waypoints[i] = waypoint;
+                // }
+                
+                waypoint_num++;
+                return;
+            }
+
+            double d_dist = hypot(
+                waypoint.pos_x - waypoints[waypoint_num - 1].pos_x,
+                waypoint.pos_y - waypoints[waypoint_num - 1].pos_y
+            );
+
+            tf2::Quaternion tf2_quat;
+            tf2::fromMsg(msg->pose.orientation, tf2_quat);
+            tf2::Matrix3x3(tf2_quat).getRPY(
+                waypoint.roll,
+                waypoint.pitch,
+                waypoint.yaw            
+            );
+                            
+            double d_yaw = std::abs(
+                waypoint.yaw - waypoints[waypoint_num - 1].yaw
+            );
+
+            std::stringstream ss;
+            ss << "No. " << waypoint_num << " " 
+                << " yaw_base " << waypoints[waypoint_num - 1].yaw * 180.0 / M_PI 
+                << " yaw_now " << waypoint.yaw * 180.0 / M_PI 
+                << " d_yawation " << d_yaw * 180.0 / M_PI 
+                << " delta_distance " << d_dist << std::endl;
+            RCLCPP_DEBUG(this->get_logger(), "%s", ss.str().c_str());
+            
+            if((d_yaw * 180.0 / M_PI > delta_yaw && d_dist > delta_chrod)
+                || d_dist > delta_distance){	
+                
+                waypoints[waypoint_num] = waypoint;
+                waypoint_num++;
+            }
+            
+            if (with_rviz){
+                visualization_msgs::msg::Marker marker_points;
+                marker_points.header.frame_id = "map";
+                marker_points.header.stamp = this->get_clock().get()->now();
+                marker_points.ns = "marker_points";
+                // Color
+                marker_points.color.b = 1.0;
+                marker_points.color.a = 1.0;
+                marker_points.scale.x = 0.3;
+                marker_points.scale.y = 0.3;
+                marker_points.scale.z = 0.3;
+                marker_points.action = visualization_msgs::msg::Marker::ADD;
+                marker_points.type = visualization_msgs::msg::Marker::POINTS;
+                marker_points.pose.orientation.w = 1.0;
+
+                for (auto &&pair : waypoints) {
+                    geometry_msgs::msg::Point p;
+                    p.x = waypoints[pair.first].pos_x;
+                    p.y = waypoints[pair.first].pos_y;
+                    p.z = 0.25;
+                    marker_points.points.push_back(p);
+                }
+
+                this->marker_pub->publish(marker_points);        
+            }
+        }
+
+        void get_fix_msg(sensor_msgs::msg::NavSatFix::ConstSharedPtr msg) {
+            rclcpp::Time msg_stamp(msg->header.stamp);
+            lonlat = {msg_stamp.nanoseconds() * 1e-9, msg->longitude, msg->latitude};
         }
         
 };
