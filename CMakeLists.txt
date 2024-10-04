@@ -24,6 +24,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(turtlesim REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Widgets Charts)
 
 ament_auto_find_build_dependencies()
 include_directories(include)
@@ -32,6 +33,7 @@ include_directories(include)
 ament_auto_add_executable(waypoint_recorder src/waypoint_recorder.cpp)
 # add_executable(rewaypoint_loader src/txt2marker.cpp)
 ament_auto_add_executable(waypoint_editor src/marker_server.cpp)
+ament_auto_add_executable(odometry_plot src/odometry_benchmark.cpp)
 # add_executable(test_tf2_broadcaster src/test_tf2_broadcaster.cpp)
 
 # add include directory to target
@@ -41,8 +43,12 @@ target_include_directories(waypoint_recorder PUBLIC
 target_include_directories(waypoint_editor PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_include_directories(odometry_plot PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_link_libraries(waypoint_recorder yaml-cpp)
 target_link_libraries(waypoint_editor yaml-cpp)
+target_link_libraries(odometry_plot Qt5::Widgets Qt5::Charts yaml-cpp)
 # target_include_directories(rewaypoint_loader PUBLIC
 #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 #   $<INSTALL_INTERFACE:include>)
@@ -77,6 +83,12 @@ ament_target_dependencies(
   "tf2_ros"
   "tf2"
   "yaml-cpp"
+)
+ament_target_dependencies(
+  odometry_plot
+  "rclcpp"
+  "yaml-cpp"
+  "Qt5"
 )
 # ament_target_dependencies(
 #   rewaypoint_loader

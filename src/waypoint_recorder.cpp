@@ -42,7 +42,7 @@ class WaypointRecorder : public rclcpp::Node
             
             if (from_topic) {
                 if (from_gnss) {
-                    auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>("gnss/fix", rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
+                    auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>(topic_name, rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
                 } else {
                     auto odom_sub_qos = rclcpp::QoS(100);
                     auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, odom_sub_qos, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
