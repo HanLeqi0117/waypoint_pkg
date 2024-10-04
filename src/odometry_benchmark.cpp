@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QMainWindow>
 #include <QValueAxis>
+#include <QRandomGenerator>
 #include <rclcpp/rclcpp.hpp>
 #include <waypoint_pkg/utilis.hpp>
 #include <yaml-cpp/yaml.h>
@@ -98,6 +99,9 @@ int main(int argc, char *argv[])
         for (auto &&waypoint : node->odometry_datas[data_name]) {
             odometry_serials->append(waypoint.pos_x, waypoint.pos_y);
         }
+        QPen pen(QColor(QRandomGenerator::global()->bounded(0, 256), QRandomGenerator::global()->bounded(0, 256), QRandomGenerator::global()->bounded(0, 256)));
+        pen.setWidth(2);
+        odometry_serials->setPen(pen);
         odometry_serials->setName(data_name.c_str());
         odometry_chart->addSeries(odometry_serials);
     }
