@@ -36,7 +36,6 @@ private:
     bool read_files() {
 
         for (auto &&waypoint_file_path : waypoint_file_paths) {
-            Waypoint::Waypoints waypoints = {};
             auto position = waypoint_file_path.find_last_of('.');
             std::string file_name = waypoint_file_path.substr(0, position);
             data_names.push_back(file_name);
