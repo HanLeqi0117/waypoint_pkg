@@ -5,7 +5,7 @@ class WaypointRecorder : public rclcpp::Node
 {
     public:
 
-        WaypointRecorder() : Node("waypoint_recorder"), waypoint_num(0), lonlat{0.0, 0.0, 0.0}
+        WaypointRecorder() : Node("waypoint_recorder"), waypoint_num(0)
         {
             // Declare ROS Parameters
             waypoint_file_path = this->declare_parameter<std::string>("waypoint_file_path", std::string(std::getenv("HOME")) + "/Documents/test_waypoint_recorder.yaml");
@@ -17,15 +17,13 @@ class WaypointRecorder : public rclcpp::Node
             delta_chrod = this->declare_parameter<double>("delta_chrod", 1.0);
             rate = this->declare_parameter<double>("rate", 20.0);
             with_rviz = this->declare_parameter<bool>("with_rviz", false);
-            with_gnss = this->declare_parameter<bool>("with_gnss", false);
+            from_gnss = this->declare_parameter<bool>("from_gnss", false);
             from_topic = this->declare_parameter<bool>("from_topic", false);
 
             tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
             tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
             waypoints[0] = Waypoint::Waypoint();
-
-            auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>("gnss/fix", rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
 
             ofs.open(waypoint_file_path);
 
@@ -41,11 +39,15 @@ class WaypointRecorder : public rclcpp::Node
                 this->marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("waypoint_marker", marker_pub_qos);
             }
 
+            
             if (from_topic) {
-                auto odom_sub_qos = rclcpp::Qos(100);
-                auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, odom_sub_qos, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
-            }
-            else {
+                if (from_gnss) {
+                    auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>("gnss/fix", rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
+                } else {
+                    auto odom_sub_qos = rclcpp::QoS(100);
+                    auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, odom_sub_qos, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
+                }
+            } else {
                 this->timer = this->create_wall_timer(std::chrono::milliseconds(int(1000 / rate)), std::bind(&WaypointRecorder::main_callback, this));
             }
 
@@ -91,13 +93,12 @@ class WaypointRecorder : public rclcpp::Node
         double delta_chrod;
         double rate;
         bool with_rviz;
-        bool with_gnss;
+        bool from_gnss;
         bool from_topic;
         
         std::ofstream ofs;
 
         int waypoint_num;
-        std::vecotr<float> lonlat;
         Waypoint::Waypoints waypoints;
         
         std::unique_ptr<tf2_ros::Buffer> tf_buffer;
@@ -136,14 +137,6 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.quat_y = transform.transform.rotation.y;
             waypoint.quat_z = transform.transform.rotation.z;
             waypoint.quat_w = transform.transform.rotation.w;
-            rclcpp::Time transform_stamp(transform.header.stamp);
-            if abs(transform_stamp.nanoseconds() * 1e-9 - lonlat[0]) <= 0.5 {
-                waypoint.longitude = lonlat[1];
-                waypoint.latitude = lonlat[2];
-            } else {
-                waypoint.longitude = 0.0;
-                waypoint.latitude = 0.0;
-            }
 
             if(waypoint_num == 0)
             {   
@@ -226,21 +219,21 @@ class WaypointRecorder : public rclcpp::Node
             }            
         }
     
-        void get_odom_msg(nav_msgs::msg::Odometry::ConstSharedPtr& msg){
+        void get_odom_msg(nav_msgs::msg::Odometry::ConstSharedPtr msg){
             // Get an empty waypoint
             Waypoint::Waypoint waypoint = {};
-            waypoint.pos_x = msg->pose.position.x;
-            waypoint.pos_y = msg->pose.position.y;
-            waypoint.pos_z = msg->pose.position.z;
-            waypoint.quat_x = msg->pose.orientation.x;
-            waypoint.quat_y = msg->pose.orientation.y;
-            waypoint.quat_z = msg->pose.orientation.z;
-            waypoint.quat_w = msg->pose.orientation.w;
+            waypoint.pos_x = msg->pose.pose.position.x;
+            waypoint.pos_y = msg->pose.pose.position.y;
+            waypoint.pos_z = msg->pose.pose.position.z;
+            waypoint.quat_x = msg->pose.pose.orientation.x;
+            waypoint.quat_y = msg->pose.pose.orientation.y;
+            waypoint.quat_z = msg->pose.pose.orientation.z;
+            waypoint.quat_w = msg->pose.pose.orientation.w;
 
             if(waypoint_num == 0)
             {   
                 tf2::Quaternion tf2_quat;
-                tf2::fromMsg(msg->pose.orientation, tf2_quat);
+                tf2::fromMsg(msg->pose.pose.orientation, tf2_quat);
                 tf2::Matrix3x3(tf2_quat).getRPY(
                     waypoint.roll,
                     waypoint.pitch,
@@ -265,7 +258,7 @@ class WaypointRecorder : public rclcpp::Node
             );
 
             tf2::Quaternion tf2_quat;
-            tf2::fromMsg(msg->pose.orientation, tf2_quat);
+            tf2::fromMsg(msg->pose.pose.orientation, tf2_quat);
             tf2::Matrix3x3(tf2_quat).getRPY(
                 waypoint.roll,
                 waypoint.pitch,
@@ -319,8 +312,11 @@ class WaypointRecorder : public rclcpp::Node
         }
 
         void get_fix_msg(sensor_msgs::msg::NavSatFix::ConstSharedPtr msg) {
-            rclcpp::Time msg_stamp(msg->header.stamp);
-            lonlat = {msg_stamp.nanoseconds() * 1e-9, msg->longitude, msg->latitude};
+            Waypoint::Waypoint waypoint = {};
+            waypoint.longitude = msg->longitude;
+            waypoint.latitude = msg->latitude;
+            waypoints[waypoint_num] = waypoint;
+            waypoint_num ++;
         }
         
 };
