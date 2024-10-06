@@ -35,7 +35,7 @@ class WaypointRecorder : public rclcpp::Node
             } 
 
             if (with_rviz) {
-                auto marker_pub_qos = rclcpp::QoS(100);
+                auto marker_pub_qos = rclcpp::QoS(10);
                 this->marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("waypoint_marker", marker_pub_qos);
             }
 
@@ -44,7 +44,7 @@ class WaypointRecorder : public rclcpp::Node
                 if (from_gnss) {
                     auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>(topic_name, rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
                 } else {
-                    auto odom_sub_qos = rclcpp::QoS(100);
+                    auto odom_sub_qos = rclcpp::QoS(10);
                     auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, odom_sub_qos, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
                 }
             } else {
@@ -286,7 +286,7 @@ class WaypointRecorder : public rclcpp::Node
             
             if (with_rviz){
                 visualization_msgs::msg::Marker marker_points;
-                marker_points.header.frame_id = "map";
+                marker_points.header.frame_id = "odom";
                 marker_points.header.stamp = this->get_clock().get()->now();
                 marker_points.ns = "marker_points";
                 // Color
