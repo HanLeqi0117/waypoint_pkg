@@ -20,9 +20,6 @@ class WaypointRecorder : public rclcpp::Node
             from_gnss = this->declare_parameter<bool>("from_gnss", false);
             from_topic = this->declare_parameter<bool>("from_topic", false);
 
-            tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
-            tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
-
             waypoints[0] = Waypoint::Waypoint();
 
             ofs.open(waypoint_file_path);
@@ -39,15 +36,15 @@ class WaypointRecorder : public rclcpp::Node
                 this->marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("waypoint_marker", marker_pub_qos);
             }
 
-            
             if (from_topic) {
                 if (from_gnss) {
                     auto navsat_fix_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>(topic_name, rclcpp::QoS(10), std::bind(&WaypointRecorder::get_fix_msg, this, std::placeholders::_1));
                 } else {
-                    auto odom_sub_qos = rclcpp::QoS(10);
-                    auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, odom_sub_qos, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
+                    auto odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, rclcpp::QoS(10), std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
                 }
             } else {
+                tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
+                tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
                 this->timer = this->create_wall_timer(std::chrono::milliseconds(int(1000 / rate)), std::bind(&WaypointRecorder::main_callback, this));
             }
 
