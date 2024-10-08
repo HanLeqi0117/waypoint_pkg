@@ -11,7 +11,7 @@
 
 QT_CHARTS_USE_NAMESPACE
 
-class OdometryPlot : public rclcpp::Node {
+class OdometryPlot : public rclcpp::Node{
 public:
 
     OdometryPlot() : Node("odometry_plot"){
@@ -31,14 +31,16 @@ public:
     std::vector<std::string> waypoint_file_paths;
     std::map<std::string, std::vector<Waypoint::Waypoint>> odometry_datas;
     std::vector<std::string> data_names;
+    double x_max, x_min, y_max, y_min;
 
 private:
 
     bool read_files() {
 
         for (auto &&waypoint_file_path : waypoint_file_paths) {
-            auto position = waypoint_file_path.find_last_of('.');
-            std::string file_name = waypoint_file_path.substr(0, position);
+            auto slash_position = waypoint_file_path.find_last_of('/');
+            std::string file_name = waypoint_file_path.substr(slash_position + 1);
+            file_name = file_name.substr(0, file_name.size() - 5);
             data_names.push_back(file_name);
 
             try {
@@ -65,6 +67,20 @@ private:
                         waypoint.mode = static_cast<Waypoint::WaypointMode>(data["mode"].as<int>());
 
                         waypoints_vector.push_back(waypoint);
+
+                        if (x_max <= waypoint.pos_x) {
+                            x_max = waypoint.pos_x;
+                        }
+                        if (y_max <= waypoint.pos_y) {
+                            y_max = waypoint.pos_y;
+                        }
+                        if (y_min >= waypoint.pos_y) {
+                            y_min = waypoint.pos_y;
+                        }
+                        if (x_min >= waypoint.pos_x) {
+                            x_min = waypoint.pos_x;
+                        }
+
                     }
                 }
 
@@ -111,6 +127,14 @@ int main(int argc, char *argv[])
     // Customize axis labels
     odometry_chart->axes(Qt::Horizontal).first()->setTitleText("X Position");
     odometry_chart->axes(Qt::Vertical).first()->setTitleText("Y Position");
+
+    qreal rangeX = node->x_max - node->x_min;
+    qreal rangeY = node->y_max - node->y_min;
+    qreal largestRange = std::max(rangeX, rangeY);
+
+    // Set both axes to have the same range to maintain the 1:1 aspect ratio
+    odometry_chart->axes(Qt::Horizontal).first()->setRange(node->x_min - 20, node->x_min + largestRange + 20);
+    odometry_chart->axes(Qt::Vertical).first()->setRange(node->y_min - 20, node->y_min + largestRange + 20);
 
     // Create a odometry_chart view
     QChartView *chartView = new QChartView(odometry_chart);
