@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 
     // Set the odometry_chart view as the central widget
     window.setCentralWidget(chartView);
-    window.resize(1920, 1080);
+    window.resize(1000, 1000);
     window.show();
 
     return a.exec();
