@@ -133,8 +133,8 @@ int main(int argc, char *argv[])
     qreal largestRange = std::max(rangeX, rangeY);
 
     // Set both axes to have the same range to maintain the 1:1 aspect ratio
-    odometry_chart->axes(Qt::Horizontal).first()->setRange(node->x_min - 20, node->x_min + largestRange + 20);
-    odometry_chart->axes(Qt::Vertical).first()->setRange(node->y_min - 20, node->y_min + largestRange + 20);
+    odometry_chart->axes(Qt::Horizontal).first()->setRange(node->x_min - largestRange / 20, node->x_min + largestRange + largestRange / 20);
+    odometry_chart->axes(Qt::Vertical).first()->setRange(node->y_min - largestRange / 20, node->y_min + largestRange + largestRange / 20);
 
     // Create a odometry_chart view
     QChartView *chartView = new QChartView(odometry_chart);
