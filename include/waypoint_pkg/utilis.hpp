@@ -48,6 +48,7 @@ struct Waypoint{
     double yaw;
     double longitude;
     double latitude;
+    std::array<double, 36> covariance;
     WaypointMode mode;
 };
 

@@ -55,7 +55,7 @@ class WaypointRecorder : public rclcpp::Node
             YAML::Emitter out;
 
             for (auto &&pair : waypoints)
-            {
+            {                
                 out << YAML::BeginMap;
                 out << YAML::Key << pair.first << YAML::Value << YAML::BeginMap;
                 out << YAML::Key << "position_x" << YAML::Value << pair.second.pos_x;
@@ -71,6 +71,12 @@ class WaypointRecorder : public rclcpp::Node
                 out << YAML::Key << "longitude" << YAML::Value << pair.second.longitude;
                 out << YAML::Key << "latitude" << YAML::Value << pair.second.latitude;
                 out << YAML::Key << "mode" << YAML::Value << int(pair.second.mode);
+                out << YAML::Key << "covariance" << YAML::Value << YAML::Flow << YAML::BeginSeq;
+                for (auto &&elem : pair.second.covariance)
+                {
+                    out << elem;
+                }
+                out << YAML::EndSeq;
                 out << YAML::EndMap << YAML::EndMap; 
             }
 
@@ -225,6 +231,7 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.quat_y = msg->pose.pose.orientation.y;
             waypoint.quat_z = msg->pose.pose.orientation.z;
             waypoint.quat_w = msg->pose.pose.orientation.w;
+            waypoint.covariance = msg->pose.covariance;
 
             if(waypoint_num == 0)
             {   
@@ -311,6 +318,11 @@ class WaypointRecorder : public rclcpp::Node
             Waypoint::Waypoint waypoint = {};
             waypoint.longitude = msg->longitude;
             waypoint.latitude = msg->latitude;
+            for (std::size_t row = 0; row < 3; ++row) {
+                for (std::size_t col = 0; col < 3; ++col) {
+                    waypoint.covariance[row * 6 + col] = msg->position_covariance[row * 3 + col];
+                }
+            }
             waypoints[waypoint_num] = waypoint;
             waypoint_num ++;
         }
