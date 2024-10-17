@@ -1,6 +1,12 @@
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QScatterSeries>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QMainWindow>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QVBoxLayout>
+#include <QtGui/QPainter>
+#include <QtGui/QLinearGradient>
 #include <QApplication>
 #include <QMainWindow>
 #include <QValueAxis>
@@ -17,7 +23,7 @@ public:
 
     OdometryPlot() : Node("odometry_plot"){
         waypoint_file_paths = this->declare_parameter<std::vector<std::string>>("waypoint_file_paths", {""});
-        mode = this->declare_parameter<std::string>("mode", "comparison");
+        mode = this->declare_parameter<std::string>("mode", "comparision");
         if (waypoint_file_paths.size() == 0) {
             RCLCPP_WARN(get_logger(), "No file to read");
             return;
@@ -103,21 +109,63 @@ private:
     }
 };
 
+// 共分散に基づいて色を計算する関数
 QColor covarianceToColor(const std::array<double, 36>& covariance) {
     // x の共分散は covariance[0], y の共分散は covariance[7] に対応
-    float x_covariance = covariance[0];
-    float y_covariance = covariance[7];
+    double x_covariance = covariance[0];
+    double y_covariance = covariance[7];
 
     // x と y の共分散の平均値を用いて色を決定
-    float avg_covariance = (x_covariance + y_covariance) / 2.0f;
+    double avg_covariance = (x_covariance + y_covariance) / 2.0;
+
+    // 共分散の平均値を 0 ~ 100 の範囲に制限
+    avg_covariance = std::min(100.0, avg_covariance);
+
+    // 0 ~ 100 を 0.0 ~ 1.0 にスケーリング
+    double normalized_covariance = avg_covariance / 100.0;
 
     // 共分散が大きいほど赤くするための計算 (R成分)
-    int R = std::min(255, static_cast<int>(avg_covariance * 255.0f));
+    int R = static_cast<int>(normalized_covariance * 255.0);  // 0.0 ~ 1.0 を 0 ~ 255 にマッピング
     int G = 0;
-    int B = 255 - R; // 青から赤へのグラデーション
+    int B = 255 - R;  // 青から赤へのグラデーション
 
+    // 0 のとき青、100 のとき赤、その中間のグラデーションを返す
     return QColor(R, G, B);
 }
+
+class CovarianceChartView : public QChartView {
+public:
+    CovarianceChartView(QChart *chart, QWidget *parent = nullptr)
+        : QChartView(chart, parent) {}
+
+protected:
+    void paintEvent(QPaintEvent *event) override {
+        // 既存のチャートを描画
+        QChartView::paintEvent(event);
+
+        // 右上にグラデーションバーを描画
+        QPainter painter(this->viewport());
+
+        // グラデーションの矩形範囲を設定 (右上に表示)
+        QRect gradientRect(width() - 50, 30, 30, 120);
+
+        // 青から赤のグラデーション
+        QLinearGradient gradient(gradientRect.topLeft(), gradientRect.bottomLeft());
+        gradient.setColorAt(1.0, QColor(0, 0, 255));  // 0 の色: 青
+        gradient.setColorAt(0.0, QColor(255, 0, 0));  // 100 の色: 赤
+
+        // グラデーション描画設定
+        painter.setBrush(QBrush(gradient));
+        painter.setPen(Qt::NoPen);
+        painter.drawRect(gradientRect);
+
+        // 0 と 100 のラベル表示
+        painter.setPen(QPen(Qt::black));
+        painter.drawText(gradientRect.left() - 30, gradientRect.bottom(), "    0");
+        painter.drawText(gradientRect.left() - 30, gradientRect.top(), "100");
+    }
+};
+
 
 int main(int argc, char *argv[])
 {
@@ -125,7 +173,7 @@ int main(int argc, char *argv[])
     std::shared_ptr<OdometryPlot> node = std::make_shared<OdometryPlot>();
     QApplication app(argc, argv);
 
-    if (node->mode == "comparison") {
+    if (node->mode == "comparision") {
         QMainWindow comparision_window;
 
         QChart *odometry_chart = new QChart();
@@ -137,7 +185,7 @@ int main(int argc, char *argv[])
                 odometry_serials->append(waypoint.pos_x, waypoint.pos_y);
             }
             QPen pen(QColor(QRandomGenerator::global()->bounded(0, 256), QRandomGenerator::global()->bounded(0, 256), QRandomGenerator::global()->bounded(0, 256)));
-            pen.setWidth(2);
+            pen.setWidth(3);
             odometry_serials->setPen(pen);
             odometry_serials->setName(data_name.c_str());
             odometry_chart->addSeries(odometry_serials);
@@ -165,25 +213,28 @@ int main(int argc, char *argv[])
         comparision_window.setCentralWidget(chartView);
         comparision_window.resize(1000, 1000);
         comparision_window.show();
+        return app.exec();
 
     } else if (node->mode == "covariance") {
         for (auto &&data_name : node->data_names) {
             QMainWindow *covariance_window = new QMainWindow();
-            QtCharts::QLineSeries* lineSeries = new QtCharts::QLineSeries();
-            QtCharts::QScatterSeries* scatterSeries = new QtCharts::QScatterSeries();
-            scatterSeries->setMarkerSize(10);
+            QtCharts::QChart* chart = new QtCharts::QChart();
 
             for (auto &&waypoint : node->odometry_datas[data_name]) {
-                lineSeries->append(waypoint.pos_x, waypoint.pos_y);
+                QtCharts::QLineSeries* lineSeries = new QtCharts::QLineSeries();
+                QtCharts::QScatterSeries* scatterSeries = new QtCharts::QScatterSeries();
                 QColor pointColor = covarianceToColor(waypoint.covariance);
+
+                lineSeries->append(waypoint.pos_x, waypoint.pos_y);
                 scatterSeries->append(waypoint.pos_x, waypoint.pos_y);
                 scatterSeries->setColor(pointColor);
+                scatterSeries->setMarkerSize(10);
+                chart->addSeries(lineSeries);
+                chart->addSeries(scatterSeries); 
             }
 
-            QtCharts::QChart* chart = new QtCharts::QChart();
-            chart->addSeries(lineSeries);
-            chart->addSeries(scatterSeries);
             chart->createDefaultAxes();
+            chart->legend()->hide();
             chart->axes(Qt::Horizontal).first()->setTitleText("X Position");
             chart->axes(Qt::Vertical).first()->setTitleText("Y Position");
 
@@ -195,16 +246,19 @@ int main(int argc, char *argv[])
             chart->axes(Qt::Vertical).first()->setRange(node->y_min - largestRange / 20, node->y_min + largestRange + largestRange / 20);
 
             chart->setTitle(data_name.c_str());
-            QtCharts::QChartView* chartView = new QtCharts::QChartView(chart);
+            CovarianceChartView* chartView = new CovarianceChartView(chart);
             chartView->setRenderHint(QPainter::Antialiasing);
-
+            
             covariance_window->setCentralWidget(chartView);
             covariance_window->resize(1000, 1000);
             covariance_window->show();
         }
-        
+        return app.exec();
+
+    } else {
+        rclcpp::shutdown();
+        return 0;
     }
 
-    return app.exec();
 
 }
