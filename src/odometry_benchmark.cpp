@@ -110,7 +110,7 @@ private:
 };
 
 // 共分散に基づいて色を計算する関数
-QColor covarianceToColor(const std::array<double, 36>& covariance) {
+QColor covarianceToColor(const std::array<double, 36>& covariance, const double min_covariance, const double max_covariance) {
     // x の共分散は covariance[0], y の共分散は covariance[7] に対応
     double x_covariance = covariance[0];
     double y_covariance = covariance[7];
@@ -118,11 +118,11 @@ QColor covarianceToColor(const std::array<double, 36>& covariance) {
     // x と y の共分散の平均値を用いて色を決定
     double avg_covariance = (x_covariance + y_covariance) / 2.0;
 
-    // 共分散の平均値を 0 ~ 100 の範囲に制限
-    avg_covariance = std::min(100.0, avg_covariance);
+    // 共分散の平均値を min_covariance ~ max_covariance の範囲にクランプ
+    avg_covariance = std::max(min_covariance, std::min(max_covariance, avg_covariance));
 
-    // 0 ~ 100 を 0.0 ~ 1.0 にスケーリング
-    double normalized_covariance = avg_covariance / 100.0;
+    // min_covariance と max_covariance の範囲内で 0.0 ~ 1.0 に正規化
+    double normalized_covariance = (avg_covariance - min_covariance) / (max_covariance - min_covariance);
 
     // 共分散が大きいほど赤くするための計算 (R成分)
     int R = static_cast<int>(normalized_covariance * 255.0);  // 0.0 ~ 1.0 を 0 ~ 255 にマッピング
@@ -135,8 +135,14 @@ QColor covarianceToColor(const std::array<double, 36>& covariance) {
 
 class CovarianceChartView : public QChartView {
 public:
-    CovarianceChartView(QChart *chart, QWidget *parent = nullptr)
-        : QChartView(chart, parent) {}
+    CovarianceChartView(QChart *chart, double min_covariance, double max_covariance, QWidget *parent = nullptr)
+        : QChartView(chart, parent) {
+            this->min_covariance = min_covariance;
+            this->max_covariance = max_covariance;
+        }
+    
+    double min_covariance;
+    double max_covariance;
 
 protected:
     void paintEvent(QPaintEvent *event) override {
@@ -159,10 +165,10 @@ protected:
         painter.setPen(Qt::NoPen);
         painter.drawRect(gradientRect);
 
-        // 0 と 100 のラベル表示
+        // min_covariance と max_covariance のラベル表示
         painter.setPen(QPen(Qt::black));
-        painter.drawText(gradientRect.left() - 30, gradientRect.bottom(), "    0");
-        painter.drawText(gradientRect.left() - 30, gradientRect.top(), "100");
+        painter.drawText(gradientRect.left() - 30 - 4 * QString("%1").arg(min_covariance, 0, 'f', 2).length(), gradientRect.bottom() + 5, QString("%1").arg(min_covariance, 0, 'f', 2));
+        painter.drawText(gradientRect.left() - 30 - 4 * QString("%1").arg(max_covariance, 0, 'f', 2).length(), gradientRect.top() + 5, QString("%1").arg(max_covariance, 0, 'f', 2));
     }
 };
 
@@ -219,11 +225,22 @@ int main(int argc, char *argv[])
         for (auto &&data_name : node->data_names) {
             QMainWindow *covariance_window = new QMainWindow();
             QtCharts::QChart* chart = new QtCharts::QChart();
+            double max_covariance, min_covariance;
+
+            for (auto &&waypoint : node->odometry_datas[data_name]) {
+                double avg_covariance = (waypoint.covariance[0] + waypoint.covariance[7]) / 2.0;
+                if (avg_covariance >= max_covariance) {
+                    max_covariance = avg_covariance;
+                }
+                if (avg_covariance <= min_covariance) {
+                    min_covariance = avg_covariance;
+                }
+            }
 
             for (auto &&waypoint : node->odometry_datas[data_name]) {
                 QtCharts::QLineSeries* lineSeries = new QtCharts::QLineSeries();
                 QtCharts::QScatterSeries* scatterSeries = new QtCharts::QScatterSeries();
-                QColor pointColor = covarianceToColor(waypoint.covariance);
+                QColor pointColor = covarianceToColor(waypoint.covariance, min_covariance, max_covariance);
 
                 lineSeries->append(waypoint.pos_x, waypoint.pos_y);
                 scatterSeries->append(waypoint.pos_x, waypoint.pos_y);
@@ -246,7 +263,7 @@ int main(int argc, char *argv[])
             chart->axes(Qt::Vertical).first()->setRange(node->y_min - largestRange / 20, node->y_min + largestRange + largestRange / 20);
 
             chart->setTitle(data_name.c_str());
-            CovarianceChartView* chartView = new CovarianceChartView(chart);
+            CovarianceChartView* chartView = new CovarianceChartView(chart, min_covariance, max_covariance);
             chartView->setRenderHint(QPainter::Antialiasing);
             
             covariance_window->setCentralWidget(chartView);

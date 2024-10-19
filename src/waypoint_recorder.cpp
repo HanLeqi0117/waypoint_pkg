@@ -141,7 +141,14 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.quat_w = transform.transform.rotation.w;
 
             if(waypoint_num == 0)
-            {   
+            {
+                waypoint.pos_x = 0.0;
+                waypoint.pos_y = 0.0;
+                waypoint.pos_z = 0.0;
+                waypoint.quat_x = 0.0;
+                waypoint.quat_y = 0.0;
+                waypoint.quat_z = 0.0;
+                waypoint.quat_w = 1.0;
                 tf2::Quaternion tf2_quat;
                 tf2::fromMsg(transform.transform.rotation, tf2_quat);
                 tf2::Matrix3x3(tf2_quat).getRPY(
@@ -234,7 +241,14 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.covariance = msg->pose.covariance;
 
             if(waypoint_num == 0)
-            {   
+            {
+                waypoint.pos_x = 0.0;
+                waypoint.pos_y = 0.0;
+                waypoint.pos_z = 0.0;
+                waypoint.quat_x = 0.0;
+                waypoint.quat_y = 0.0;
+                waypoint.quat_z = 0.0;
+                waypoint.quat_w = 1.0;                
                 tf2::Quaternion tf2_quat;
                 tf2::fromMsg(msg->pose.pose.orientation, tf2_quat);
                 tf2::Matrix3x3(tf2_quat).getRPY(
