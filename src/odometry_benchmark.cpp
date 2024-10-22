@@ -238,16 +238,17 @@ int main(int argc, char *argv[])
             }
 
             for (auto &&waypoint : node->odometry_datas[data_name]) {
-                QtCharts::QLineSeries* lineSeries = new QtCharts::QLineSeries();
                 QtCharts::QScatterSeries* scatterSeries = new QtCharts::QScatterSeries();
                 QColor pointColor = covarianceToColor(waypoint.covariance, min_covariance, max_covariance);
-
-                lineSeries->append(waypoint.pos_x, waypoint.pos_y);
                 scatterSeries->append(waypoint.pos_x, waypoint.pos_y);
                 scatterSeries->setColor(pointColor);
-                scatterSeries->setMarkerSize(10);
-                chart->addSeries(lineSeries);
-                chart->addSeries(scatterSeries); 
+                double now_covariance = abs((waypoint.covariance[0] + waypoint.covariance[7]) / 2);
+                if (now_covariance >= max_covariance / 2.0) {
+                    scatterSeries->setMarkerSize(13);
+                } else {
+                    scatterSeries->setMarkerSize(10);
+                }
+                chart->addSeries(scatterSeries);
             }
 
             chart->createDefaultAxes();
