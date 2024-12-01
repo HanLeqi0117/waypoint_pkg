@@ -73,7 +73,11 @@ private:
                         waypoint.yaw = data["yaw"].as<double>();
                         waypoint.longitude = data["longitude"].as<double>();
                         waypoint.latitude = data["latitude"].as<double>();
-                        waypoint.covariance = data["covariance"].as<std::array<double, 36>>();
+                        if (data["covariance"].IsDefined()) {
+                            waypoint.covariance = data["covariance"].as<std::array<double, 36>>();
+                        } else {
+                            waypoint.covariance = std::array<double, 36>();
+                        }                        
                         waypoint.mode = static_cast<Waypoint::WaypointMode>(data["mode"].as<int>());
 
                         waypoints_vector.push_back(waypoint);

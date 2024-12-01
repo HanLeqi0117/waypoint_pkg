@@ -311,6 +311,9 @@ class WaypointHandler : public rclcpp::Node
                 case Waypoint::WaypointMode::SIGNAL:
                     RCLCPP_INFO(get_logger(), "Mode : SIGNAL");
                     break;
+                case Waypoint::WaypointMode::CHANGE_MAP:
+                    RCLCPP_INFO(get_logger(), "Mode : CHANGE_MAP");
+                    break;
                 default:
                     break;
             }

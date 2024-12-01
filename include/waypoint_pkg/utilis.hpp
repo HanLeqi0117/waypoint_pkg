@@ -32,7 +32,8 @@ enum WaypointMode {
     CANCEL = 2,
     DIRECT = 3,
     STOP = 4,
-    SIGNAL = 5
+    SIGNAL = 5,
+    CHANGE_MAP = 6
 };
 
 struct Waypoint{

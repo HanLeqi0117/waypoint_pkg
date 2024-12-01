@@ -49,6 +49,7 @@ void WaypointHandler::initialize()
 	sub_menu_entry_id["DIRECT"] = menu_handler.insert(main_menu_entry_id["Mode"], "DIRECT", std::bind(&WaypointHandler::process_feedback, this, _1));
 	sub_menu_entry_id["STOP"] = menu_handler.insert(main_menu_entry_id["Mode"], "STOP", std::bind(&WaypointHandler::process_feedback, this, _1));
 	sub_menu_entry_id["SIGNAL"] = menu_handler.insert(main_menu_entry_id["Mode"], "SIGNAL", std::bind(&WaypointHandler::process_feedback, this, _1));
+	sub_menu_entry_id["CHANGE_MAP"] = menu_handler.insert(main_menu_entry_id["Mode"], "CHANGE_MAP", std::bind(&WaypointHandler::process_feedback, this, _1));
 	
 	for (int i = 0; i < static_cast<int>(waypoints_vector.size()); i++){
 		make_marker(i, waypoints_vector[i]);
@@ -138,7 +139,11 @@ void WaypointHandler::process_feedback(InteractiveMarkerFeedback::ConstSharedPtr
 				} else if (feedback->menu_entry_id == sub_menu_entry_id["SIGNAL"]) {
 					waypoints_vector[index].mode = Waypoint::WaypointMode::SIGNAL;
 					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to SIGNAL", index);
+				} else if (feedback->menu_entry_id == sub_menu_entry_id["CHANGE_MAP"]) {
+					waypoints_vector[index].mode = Waypoint::WaypointMode::CHANGE_MAP;
+					RCLCPP_INFO(get_logger(), "Waypoint No. %d mode is changed to CHANGE_MAP", index);
 				}
+
 
 				marker_server->erase(std::to_string(index));
 				marker_server->applyChanges();
