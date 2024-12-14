@@ -201,9 +201,9 @@ class WaypointHandler : public rclcpp::Node
             control.orientation.x = 0;
             control.orientation.y = 1;
             control.orientation.z = 0;
-            control.name = "move_z";
-            control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
-            inter_marker.controls.push_back(control);            
+            // control.name = "move_z";
+            // control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
+            // inter_marker.controls.push_back(control);            
             control.name = "rotate_z";
             control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
             inter_marker.controls.push_back(control);
@@ -215,9 +215,9 @@ class WaypointHandler : public rclcpp::Node
             control.name = "move_y";
             control.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
             inter_marker.controls.push_back(control);
-            control.name = "rotate_y";
-            control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-            inter_marker.controls.push_back(control);
+            // control.name = "rotate_y";
+            // control.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+            // inter_marker.controls.push_back(control);
 
             marker_server->insert(inter_marker);
 

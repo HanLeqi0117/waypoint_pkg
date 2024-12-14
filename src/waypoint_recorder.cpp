@@ -55,7 +55,12 @@ class WaypointRecorder : public rclcpp::Node
             YAML::Emitter out;
 
             for (auto &&pair : waypoints)
-            {                
+            {
+
+                if ( abs(pair.second.pos_x) >= 1000.0 || abs(pair.second.pos_y) >= 1000.0){
+                    RCLCPP_WARN(this->get_logger(), "There is an irregular data in this dataset, throw it away!!");
+                    continue;
+                }
                 out << YAML::BeginMap;
                 out << YAML::Key << pair.first << YAML::Value << YAML::BeginMap;
                 out << YAML::Key << "position_x" << YAML::Value << pair.second.pos_x;
@@ -194,8 +199,8 @@ class WaypointRecorder : public rclcpp::Node
                 << " delta_distance " << d_dist << std::endl;
             RCLCPP_DEBUG(this->get_logger(), "%s", ss.str().c_str());
             
-            if((d_yaw * 180.0 / M_PI > delta_yaw && d_dist > delta_chrod)
-                || d_dist > delta_distance){	
+            if(((d_yaw * 180.0 / M_PI > delta_yaw && d_dist > delta_chrod)
+                || d_dist > delta_distance) && (d_dist < 100.0)) {	
                 
                 waypoints[waypoint_num] = waypoint;
                 waypoint_num++;
