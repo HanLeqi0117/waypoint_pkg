@@ -182,6 +182,17 @@ int main(int argc, char *argv[])
     rclcpp::init(argc, argv);
     std::shared_ptr<OdometryPlot> node = std::make_shared<OdometryPlot>();
     QApplication app(argc, argv);
+    // 彩虹7色对应的色相值（大致分布）
+    QVector<int> rainbowHues = {0, 120, 240};
+    QVector<QColor> rainbowColors;
+    // 生成颜色
+    for (int hue : rainbowHues) {
+        QColor color;
+        color.setHsv(hue, 255, 255);  // 最大饱和度和亮度
+        rainbowColors.append(color);
+    }
+    QColor black(0, 0, 0);  // 黑色的RGB值
+    rainbowColors.append(black);
 
     if (node->mode == "comparision") {
         QMainWindow comparision_window;
@@ -194,7 +205,7 @@ int main(int argc, char *argv[])
             for (auto &&waypoint : node->odometry_datas[data_name]) {
                 odometry_serials->append(waypoint.pos_x, waypoint.pos_y);
             }
-            QPen pen(QColor(QRandomGenerator::global()->bounded(0, 256), QRandomGenerator::global()->bounded(0, 256), QRandomGenerator::global()->bounded(0, 256)));
+            QPen pen(rainbowColors.takeFirst());
             pen.setWidth(3);
             odometry_serials->setPen(pen);
             odometry_serials->setName(data_name.c_str());
