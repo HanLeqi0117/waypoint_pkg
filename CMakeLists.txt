@@ -24,6 +24,8 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(turtlesim REQUIRED)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/modules)
+find_package(GeographicLib REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets Charts)
 
 ament_auto_find_build_dependencies()
@@ -72,6 +74,7 @@ ament_target_dependencies(
   "visualization_msgs"
   "tf2_ros"
   "yaml-cpp"
+  "GeographicLib"
 )
 ament_target_dependencies(
   waypoint_editor

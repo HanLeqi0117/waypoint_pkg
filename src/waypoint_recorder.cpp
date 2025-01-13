@@ -1,5 +1,6 @@
 #include <waypoint_pkg/utilis.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <GeographicLib/UTMUPS.hpp>
 
 class WaypointRecorder : public rclcpp::Node
 {
@@ -18,6 +19,9 @@ class WaypointRecorder : public rclcpp::Node
             with_rviz = this->declare_parameter<bool>("with_rviz", false);
             from_gnss = this->declare_parameter<bool>("from_gnss", false);
             from_topic = this->declare_parameter<bool>("from_topic", false);
+
+            tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
+            tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
             waypoints[0] = Waypoint::Waypoint();
 
@@ -42,8 +46,6 @@ class WaypointRecorder : public rclcpp::Node
                     odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(topic_name, 10, std::bind(&WaypointRecorder::get_odom_msg, this, std::placeholders::_1));
                 }
             } else {
-                tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
-                tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
                 this->timer = this->create_wall_timer(std::chrono::milliseconds(200), std::bind(&WaypointRecorder::main_callback, this));
             }
 
@@ -99,6 +101,8 @@ class WaypointRecorder : public rclcpp::Node
         double delta_yaw;
         double delta_chrod;
         double rate;
+        double T_utm_topomap_x;
+        double T_utm_topomap_y;
         bool with_rviz;
         bool from_gnss;
         bool from_topic;
@@ -334,9 +338,29 @@ class WaypointRecorder : public rclcpp::Node
         }
 
         void get_fix_msg(sensor_msgs::msg::NavSatFix::ConstSharedPtr msg) {
+            try {
+                transform = tf_buffer->lookupTransform("utm", "topomap", rclcpp::Time(0, 0, get_clock()->get_clock_type()));
+                T_utm_topomap_x = transform.transform.translation.x;
+                T_utm_topomap_y = transform.transform.translation.y;
+                RCLCPP_DEBUG(get_logger(), "Exception when listening Transformation of Frames: %f, %f", transform.transform.translation.x, transform.transform.translation.y);
+            }
+            // tf2 exception
+            catch(const tf2::TransformException &ex) {
+                RCLCPP_WARN(get_logger(), "Exception when listening Transformation of Frames: %s", ex.what());
+                return;
+            }
+            int zone = static_cast<int>(std::floor((msg->longitude + 180.0) / 6.0)) + 1;
+            bool northp = msg->latitude >= 0;
+            // auto earth = GeographicLib::Geocentric::WGS84();
+            double x, y;
+            // earth.Forward(msg->latitude, msg->longitude, 0.0, x, y, z);
+            GeographicLib::UTMUPS::Forward(msg->latitude, msg->longitude, zone, northp, x, y);
+            // RCLCPP_WARN(get_logger(), "Exception when listening Transformation of Frames: %f, %f", x, y);
             Waypoint::Waypoint waypoint = {};
             waypoint.longitude = msg->longitude;
             waypoint.latitude = msg->latitude;
+            waypoint.pos_x = x - T_utm_topomap_x;
+            waypoint.pos_y = y - T_utm_topomap_y;
             for (std::size_t row = 0; row < 3; ++row) {
                 for (std::size_t col = 0; col < 3; ++col) {
                     waypoint.covariance[row * 6 + col] = msg->position_covariance[row * 3 + col];

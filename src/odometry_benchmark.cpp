@@ -11,6 +11,7 @@
 #include <QMainWindow>
 #include <QValueAxis>
 #include <QRandomGenerator>
+#include <QtCharts/QLegendMarker>
 #include <rclcpp/rclcpp.hpp>
 #include <waypoint_pkg/utilis.hpp>
 #include <yaml-cpp/yaml.h>
@@ -176,6 +177,51 @@ protected:
     }
 };
 
+void addOriginLines(QChart *chart, qreal x_min, qreal y_min, qreal x_max, qreal y_max) {
+    QValueAxis *xAxis = static_cast<QValueAxis *>(chart->axes(Qt::Horizontal).first());
+    QValueAxis *yAxis = static_cast<QValueAxis *>(chart->axes(Qt::Vertical).first());
+
+
+    // 检查原点是否在当前范围内
+    if (xAxis->min() <= 0 && xAxis->max() >= 0) {
+        // 绘制 x = 0 的垂直分隔线
+        QLineSeries *verticalLine = new QLineSeries();
+        verticalLine->append(0, y_min);
+        verticalLine->append(0, y_max);
+
+        QPen pen(Qt::gray);
+        pen.setWidth(2);  // 设置线条宽度
+        verticalLine->setPen(pen);
+
+        chart->addSeries(verticalLine);
+        verticalLine->attachAxis(xAxis);
+        verticalLine->attachAxis(yAxis);
+
+        // 隐藏图例
+        verticalLine->setName(""); // 不设置名称
+        chart->legend()->markers(verticalLine).first()->setVisible(false);
+    }
+
+    if (yAxis->min() <= 0 && yAxis->max() >= 0) {
+        // 绘制 y = 0 的水平分隔线
+        QLineSeries *horizontalLine = new QLineSeries();
+        horizontalLine->append(x_min, 0);
+        horizontalLine->append(x_max, 0);
+
+        QPen pen(Qt::gray);
+        pen.setWidth(2);  // 设置线条宽度
+        horizontalLine->setPen(pen);
+
+        chart->addSeries(horizontalLine);
+        horizontalLine->attachAxis(xAxis);
+        horizontalLine->attachAxis(yAxis);
+
+        // 隐藏图例
+        horizontalLine->setName(""); // 不设置名称
+        chart->legend()->markers(horizontalLine).first()->setVisible(false);
+    }
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -212,15 +258,16 @@ int main(int argc, char *argv[])
             odometry_chart->addSeries(odometry_serials);
         }
 
+        qreal rangeX = node->x_max - node->x_min;
+        qreal rangeY = node->y_max - node->y_min;
+        qreal largestRange = std::max(rangeX, rangeY);
+
         odometry_chart->createDefaultAxes();
+        addOriginLines(odometry_chart, node->x_min  - largestRange / 20, node->y_min - largestRange / 20, node->x_min + largestRange + largestRange / 20, node->y_min + largestRange + largestRange / 20);
 
         // Customize axis labels
         odometry_chart->axes(Qt::Horizontal).first()->setTitleText("X Position");
         odometry_chart->axes(Qt::Vertical).first()->setTitleText("Y Position");
-
-        qreal rangeX = node->x_max - node->x_min;
-        qreal rangeY = node->y_max - node->y_min;
-        qreal largestRange = std::max(rangeX, rangeY);
 
         // Set both axes to have the same range to maintain the 1:1 aspect ratio
         odometry_chart->axes(Qt::Horizontal).first()->setRange(node->x_min - largestRange / 20, node->x_min + largestRange + largestRange / 20);
@@ -266,14 +313,16 @@ int main(int argc, char *argv[])
                 chart->addSeries(scatterSeries);
             }
 
+            qreal rangeX = node->x_max - node->x_min;
+            qreal rangeY = node->y_max - node->y_min;
+            qreal largestRange = std::max(rangeX, rangeY);
+
             chart->createDefaultAxes();
             chart->legend()->hide();
             chart->axes(Qt::Horizontal).first()->setTitleText("X Position");
             chart->axes(Qt::Vertical).first()->setTitleText("Y Position");
-
-            qreal rangeX = node->x_max - node->x_min;
-            qreal rangeY = node->y_max - node->y_min;
-            qreal largestRange = std::max(rangeX, rangeY);
+            addOriginLines(chart, node->x_min  - largestRange / 20, node->y_min - largestRange / 20, node->x_min + largestRange + largestRange / 20, node->y_min + largestRange + largestRange / 20);
+            
 
             chart->axes(Qt::Horizontal).first()->setRange(node->x_min - largestRange / 20, node->x_min + largestRange + largestRange / 20);
             chart->axes(Qt::Vertical).first()->setRange(node->y_min - largestRange / 20, node->y_min + largestRange + largestRange / 20);
