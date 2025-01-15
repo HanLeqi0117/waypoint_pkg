@@ -78,6 +78,7 @@ class WaypointRecorder : public rclcpp::Node
                 out << YAML::Key << "longitude" << YAML::Value << pair.second.longitude;
                 out << YAML::Key << "latitude" << YAML::Value << pair.second.latitude;
                 out << YAML::Key << "mode" << YAML::Value << int(pair.second.mode);
+                out << YAML::Key << "utm_zone" << YAML::Value << pair.second.utm_zone;
                 out << YAML::Key << "covariance" << YAML::Value << YAML::Flow << YAML::BeginSeq;
                 for (auto &&elem : pair.second.covariance)
                 {

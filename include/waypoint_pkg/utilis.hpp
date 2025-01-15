@@ -49,6 +49,7 @@ struct Waypoint{
     double yaw;
     double longitude;
     double latitude;
+    std::string utm_zone = "None";
     std::array<double, 36> covariance;
     WaypointMode mode;
 };
