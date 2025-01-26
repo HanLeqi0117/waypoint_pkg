@@ -79,6 +79,7 @@ class WaypointRecorder : public rclcpp::Node
                 out << YAML::Key << "latitude" << YAML::Value << pair.second.latitude;
                 out << YAML::Key << "mode" << YAML::Value << int(pair.second.mode);
                 out << YAML::Key << "utm_zone" << YAML::Value << pair.second.utm_zone;
+                out << YAML::Key << "time_stamp" << YAML::Value << pair.second.time_stamp;
                 out << YAML::Key << "covariance" << YAML::Value << YAML::Flow << YAML::BeginSeq;
                 for (auto &&elem : pair.second.covariance)
                 {
@@ -149,6 +150,7 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.quat_y = transform.transform.rotation.y;
             waypoint.quat_z = transform.transform.rotation.z;
             waypoint.quat_w = transform.transform.rotation.w;
+            waypoint.time_stamp = transform.header.stamp.sec + transform.header.stamp.nanosec * 1e-9;
 
             if(waypoint_num == 0)
             {
@@ -248,6 +250,7 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.quat_y = msg->pose.pose.orientation.y;
             waypoint.quat_z = msg->pose.pose.orientation.z;
             waypoint.quat_w = msg->pose.pose.orientation.w;
+            waypoint.time_stamp = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
             waypoint.covariance = msg->pose.covariance;
 
             if(waypoint_num == 0)
@@ -362,6 +365,7 @@ class WaypointRecorder : public rclcpp::Node
             waypoint.latitude = msg->latitude;
             waypoint.pos_x = x - T_utm_topomap_x;
             waypoint.pos_y = y - T_utm_topomap_y;
+            waypoint.time_stamp = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
             for (std::size_t row = 0; row < 3; ++row) {
                 for (std::size_t col = 0; col < 3; ++col) {
                     waypoint.covariance[row * 6 + col] = msg->position_covariance[row * 3 + col];
